@@ -1,0 +1,16 @@
+github:
+  Bash: execute
+  Read: read
+  Write: edit
+  Edit: edit
+  Glob: search
+  Grep: search
+  Agent: agent
+  WebSearch: web/fetch
+  TaskCreate: todo
+  TaskGet: todo
+  TaskList: todo
+  TaskUpdate: todo
+  # Tools with no mapping are dropped (Claude-only)
+  # NotebookEdit: (absent = dropped)
+  # LSP: (absent = dropped)

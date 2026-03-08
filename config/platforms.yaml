@@ -1,0 +1,61 @@
+# Claude Code — canonical platform, passthrough
+claude:
+  types:
+    agents:
+      path: .claude/agents
+      suffix: .md
+    rules:
+      path: .claude/rules
+      suffix: .md
+    commands:
+      path: .claude/commands
+      suffix: .md
+    skills:
+      path: .claude/skills
+      suffix: .md
+  drop_fields:
+    - applyTo
+
+# GitHub Copilot
+github:
+  types:
+    agents:
+      path: .github/agents
+      suffix: .agent.md
+    rules:
+      path: .github/instructions
+      suffix: .instructions.md
+    commands:
+      path: .github/prompts
+      suffix: .prompt.md
+      extra_fields:
+        agent: agent
+    skills:
+      path: .github/skills
+      suffix: .md
+  drop_fields:
+    - model
+    - context
+    - agent
+    - disable-model-invocation
+    - paths
+    - path
+
+# Future example:
+# gemini:
+#   types:
+#     agents:
+#       path: .gemini/agents
+#       suffix: .md
+#     rules:
+#       path: .gemini/rules
+#       suffix: .md
+#     commands:
+#       path: .gemini/commands
+#       suffix: .md
+#     skills:
+#       path: .gemini/skills
+#       suffix: .md
+#   drop_fields:
+#     - context
+#     - disable-model-invocation
