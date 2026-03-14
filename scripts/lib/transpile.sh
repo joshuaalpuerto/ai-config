@@ -36,22 +36,24 @@ resolve_field() {
 
 # Resolve tool list for a platform
 # If override exists: use verbatim. Otherwise: auto-map from canonical.
+# Usage: resolve_tools file platform [field]
+# field defaults to "tools" but also supports "allowed-tools"
 resolve_tools() {
-  local file="$1" platform="$2"
+  local file="$1" platform="$2" field="${3:-tools}"
 
   # Check for override
   local override_count
   override_count=$(yq --front-matter=extract \
-    ".overrides.${platform}.tools | length" "$file" 2>/dev/null || echo "0")
+    ".overrides.${platform}.\"${field}\" | length" "$file" 2>/dev/null || echo "0")
 
   if [[ "$override_count" -gt 0 ]]; then
-    yq --front-matter=extract ".overrides.${platform}.tools[]" "$file"
+    yq --front-matter=extract ".overrides.${platform}.\"${field}\"[]" "$file"
     return
   fi
 
   # No override — read canonical tools and map them
   local tools
-  tools=$(yq --front-matter=extract '.tools[]' "$file" 2>/dev/null || true)
+  tools=$(yq --front-matter=extract ".\"${field}\"[]" "$file" 2>/dev/null || true)
   [[ -z "$tools" ]] && return
 
   if [[ "$platform" == "claude" ]]; then
@@ -136,11 +138,11 @@ build_frontmatter() {
     fi
 
     # Resolve the field value
-    if [[ "$field" == "tools" ]]; then
+    if [[ "$field" == "tools" || "$field" == "allowed-tools" ]]; then
       local tools
-      tools=$(resolve_tools "$file" "$platform")
+      tools=$(resolve_tools "$file" "$platform" "$field")
       if [[ -n "$tools" ]]; then
-        output+="tools:"$'\n'
+        output+="${field}:"$'\n'
         while IFS= read -r t; do
           [[ -n "$t" ]] && output+="  - ${t}"$'\n'
         done <<< "$tools"
@@ -235,22 +237,28 @@ transpile_type() {
   done < <(find "$src_dir" -name '*.md' | sort)
 }
 
+# Derive unique type names from all platforms in platforms.yaml
+get_all_types() {
+  yq '.[].types | keys | .[]' "$PLATFORMS_CFG" | sort -u
+}
+
 # Transpile all types for all platforms
 transpile_all() {
   local platforms types
 
   platforms=$(yq '. | keys | .[]' "$PLATFORMS_CFG")
-  types="agents rules commands skills"
+  types=$(get_all_types)
 
   while IFS= read -r platform; do
     [[ -z "$platform" ]] && continue
     echo "[${platform}]"
-    for type in $types; do
+    while IFS= read -r type; do
+      [[ -z "$type" ]] && continue
       transpile_type "$type" "$platform"
       # Count files processed
       local count
       count=$(find "$SRC_DIR/${type}" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
       [[ "$count" -gt 0 ]] && echo "  ${type}: ${count} file(s)"
-    done
+    done <<< "$types"
   done <<< "$platforms"
 }
