@@ -3,7 +3,8 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$SCRIPT_DIR"
 SRC_DIR="${SRC_DIR:-$ROOT_DIR/src}"
 PLATFORMS_CFG="$ROOT_DIR/config/platforms.yaml"
 TOOL_MAP_CFG="$ROOT_DIR/config/tool-map.yaml"
