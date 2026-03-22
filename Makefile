@@ -1,16 +1,15 @@
 SHELL := /bin/bash
-SCRIPTS_DIR := scripts
 
 .PHONY: build clean validate watch
 
 build:
-	@bash $(SCRIPTS_DIR)/build.sh
+	@bash build.sh
 
 clean:
-	@bash $(SCRIPTS_DIR)/clean.sh
+	@bash clean.sh
 
 validate:
-	@bash $(SCRIPTS_DIR)/validate.sh
+	@bash validate.sh
 
 watch:
 	@echo "Watching src/ for changes..."
