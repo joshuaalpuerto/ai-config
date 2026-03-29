@@ -11,6 +11,11 @@
     }
   },
   "$defs": {
+    "ToolName": {
+      "type": "string",
+      "description": "Canonical tool name.",
+      "enum": ["Bash","Read","Write","Edit","Glob","Grep","Agent","WebSearch","TaskCreate","TaskGet","TaskList","TaskUpdate"]
+    },
     "PlatformToolMap": {
       "type": "object",
       "description": "Canonical tool name → platform-specific tool name. Omit a key to drop that tool for this platform.",

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agents.schema.json",
+  "title": "Agent Source Frontmatter",
+  "description": "Frontmatter schema for source files under src/agents/.",
+  "type": "object",
+  "required": ["name", "description"],
+  "additionalProperties": false,
+  "properties": {
+    "name":                     { "type": "string" },
+    "description":              { "type": "string" },
+    "model":                    { "type": "string" },
+    "context":                  { "type": "string" },
+    "disable-model-invocation": { "type": "boolean" },
+    "tools": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "tool-map.schema.json#/$defs/ToolName" }
+    },
+    "overrides": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/AgentOverride" }
+    }
+  },
+  "$defs": {
+    "AgentOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name":                     { "type": "string" },
+        "description":              { "type": "string" },
+        "model":                    { "type": "string" },
+        "context":                  { "type": "string" },
+        "disable-model-invocation": { "type": "boolean" },
+        "tools": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "tool-map.schema.json#/$defs/ToolName" }
+        }
+      }
+    }
+  }
+}

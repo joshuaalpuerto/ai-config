@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "commands.schema.json",
+  "title": "Command Source Frontmatter",
+  "description": "Frontmatter schema for source files under src/commands/.",
+  "type": "object",
+  "required": ["description"],
+  "additionalProperties": false,
+  "properties": {
+    "description": { "type": "string" },
+    "tools": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "tool-map.schema.json#/$defs/ToolName" }
+    },
+    "overrides": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/CommandOverride" }
+    }
+  },
+  "$defs": {
+    "CommandOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string" },
+        "tools": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "tool-map.schema.json#/$defs/ToolName" }
+        }
+      }
+    }
+  }
+}

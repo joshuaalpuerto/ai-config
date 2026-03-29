@@ -26,6 +26,7 @@ func ValidateAll(
 	w io.Writer,
 ) Result {
 	var result Result
+	schemasDir := filepath.Join(filepath.Dir(srcDir), "schemas")
 
 	validPlatforms := make(map[string]bool, len(platforms))
 	platformList := make([]string, 0, len(platforms))
@@ -76,9 +77,9 @@ func ValidateAll(
 		for _, srcFile := range mdFiles {
 			relPath, _ := filepath.Rel(filepath.Dir(srcDir), srcFile)
 
-			fm, _, hasFrontmatter, parseErr := frontmatter.ParseFile(srcFile)
+			fm, _, hasFrontmatter, parseErr := frontmatter.ParseFileValidated(srcFile, typeName, schemasDir)
 			if parseErr != nil {
-				fmt.Fprintf(w, "ERROR: %s — invalid frontmatter YAML\n", relPath)
+				fmt.Fprintf(w, "ERROR: %s — %s\n", relPath, parseErr)
 				result.Errors++
 				continue
 			}
@@ -89,11 +90,6 @@ func ValidateAll(
 
 			if isEmptyFrontmatter(fm) {
 				continue
-			}
-
-			if fm.Description == "" {
-				fmt.Fprintf(w, "WARN: %s — missing 'description' field\n", relPath)
-				result.Warnings++
 			}
 
 			for op := range fm.Overrides {

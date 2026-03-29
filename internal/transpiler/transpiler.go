@@ -14,13 +14,13 @@ import (
 
 // TranspileFile processes a single source file for a single platform+type combo.
 func TranspileFile(
-	srcFile, platform string,
+	srcFile, platform, typeName, schemasDir string,
 	typeCfg config.TypeConfig,
 	platCfg config.PlatformConfig,
 	toolMap config.ToolMap,
 	outDir string,
 ) error {
-	fm, body, hasFrontmatter, err := frontmatter.ParseFile(srcFile)
+	fm, body, hasFrontmatter, err := frontmatter.ParseFileValidated(srcFile, typeName, schemasDir)
 	if err != nil {
 		return fmt.Errorf("parsing %s: %w", srcFile, err)
 	}
@@ -47,13 +47,13 @@ func TranspileFile(
 // (e.g. src/skills/github/SKILL.md). The relative path is preserved under outDir
 // with no suffix applied, matching the shell behavior.
 func TranspileSubdirFile(
-	srcFile, relPath, platform string,
+	srcFile, relPath, platform, typeName, schemasDir string,
 	typeCfg config.TypeConfig,
 	platCfg config.PlatformConfig,
 	toolMap config.ToolMap,
 	outDir string,
 ) error {
-	fm, body, hasFrontmatter, err := frontmatter.ParseFile(srcFile)
+	fm, body, hasFrontmatter, err := frontmatter.ParseFileValidated(srcFile, typeName, schemasDir)
 	if err != nil {
 		return fmt.Errorf("parsing %s: %w", srcFile, err)
 	}
@@ -82,6 +82,7 @@ func TranspileType(
 	toolMap config.ToolMap,
 	targetRoot string,
 ) (int, error) {
+	schemasDir := filepath.Join(filepath.Dir(srcDir), "schemas")
 	typeDir := filepath.Join(srcDir, typeName)
 	info, err := os.Stat(typeDir)
 	if err != nil || !info.IsDir() {
@@ -118,11 +119,11 @@ func TranspileType(
 
 		if strings.Contains(relPath, string(filepath.Separator)) {
 			// Subdirectory file — preserve relative path, no suffix.
-			if err := TranspileSubdirFile(srcFile, relPath, platform, typeCfg, platCfg, toolMap, outDir); err != nil {
+			if err := TranspileSubdirFile(srcFile, relPath, platform, typeName, schemasDir, typeCfg, platCfg, toolMap, outDir); err != nil {
 				return 0, err
 			}
 		} else {
-			if err := TranspileFile(srcFile, platform, typeCfg, platCfg, toolMap, outDir); err != nil {
+			if err := TranspileFile(srcFile, platform, typeName, schemasDir, typeCfg, platCfg, toolMap, outDir); err != nil {
 				return 0, err
 			}
 		}

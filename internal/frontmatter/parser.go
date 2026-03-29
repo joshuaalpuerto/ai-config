@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
+	jsonschema "github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
 )
 
@@ -67,4 +69,78 @@ func ParseFile(path string) (fm Frontmatter, body string, hasFrontmatter bool, e
 	body = strings.TrimRight(strings.Join(bodyLines, "\n"), "\n")
 
 	return fm, body, true, nil
+}
+
+// ParseFileValidated is like ParseFile but validates the extracted frontmatter
+// YAML block against schemas/<typeName>.schema.json before unmarshalling.
+// schemasDir must be the absolute path to the schemas/ directory at the repo root.
+// Files with no frontmatter skip schema validation and are passed through unchanged.
+func ParseFileValidated(path, typeName, schemasDir string) (Frontmatter, string, bool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Frontmatter{}, "", false, fmt.Errorf("reading %s: %w", path, err)
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+
+	if !scanner.Scan() {
+		return Frontmatter{}, string(data), false, nil
+	}
+	if scanner.Text() != "---" {
+		return Frontmatter{}, string(data), false, nil
+	}
+
+	var fmLines []string
+	foundClose := false
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "---" {
+			foundClose = true
+			break
+		}
+		fmLines = append(fmLines, line)
+	}
+	if !foundClose {
+		return Frontmatter{}, string(data), false, nil
+	}
+
+	fmYAML := strings.Join(fmLines, "\n")
+	schemaFile := filepath.Join(schemasDir, typeName+".schema.json")
+	if err := validateFrontmatter([]byte(fmYAML), path, schemaFile); err != nil {
+		return Frontmatter{}, "", false, err
+	}
+
+	var fm Frontmatter
+	if err := yaml.Unmarshal([]byte(fmYAML), &fm); err != nil {
+		return Frontmatter{}, "", false, fmt.Errorf("parsing frontmatter in %s: %w", path, err)
+	}
+
+	var bodyLines []string
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "---" {
+			continue
+		}
+		bodyLines = append(bodyLines, line)
+	}
+	body := strings.TrimRight(strings.Join(bodyLines, "\n"), "\n")
+
+	return fm, body, true, nil
+}
+
+// validateFrontmatter validates rawFMYAML against the JSON Schema at schemaFile.
+func validateFrontmatter(rawFMYAML []byte, srcFile, schemaFile string) error {
+	var doc any
+	if err := yaml.Unmarshal(rawFMYAML, &doc); err != nil {
+		return fmt.Errorf("parsing frontmatter in %s: %w", srcFile, err)
+	}
+	c := jsonschema.NewCompiler()
+	sch, err := c.Compile(schemaFile)
+	if err != nil {
+		return fmt.Errorf("compiling schema %s: %w", schemaFile, err)
+	}
+	if err := sch.Validate(doc); err != nil {
+		return fmt.Errorf("%s: frontmatter schema violation: %w", srcFile, err)
+	}
+	return nil
 }
