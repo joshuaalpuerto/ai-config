@@ -1,15 +1,18 @@
 SHELL := /bin/bash
 
-.PHONY: build clean validate watch
+.PHONY: build clean validate watch install
+
+install:
+	@go build -o aicfg ./cmd
 
 build:
-	@bash build.sh
+	@go run ./cmd build
 
 clean:
-	@bash clean.sh
+	@go run ./cmd clean
 
 validate:
-	@bash validate.sh
+	@go run ./cmd validate
 
 watch:
 	@echo "Watching src/ for changes..."
