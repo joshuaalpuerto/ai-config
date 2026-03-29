@@ -3,7 +3,7 @@ SHELL := /bin/bash
 .PHONY: build clean validate watch install
 
 install:
-	@go build -o aicfg ./cmd
+	@go install ./cmd/...
 
 build:
 	@go run ./cmd build
