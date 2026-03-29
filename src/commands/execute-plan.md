@@ -1,4 +1,5 @@
 ---
+description: Implement an approved technical plan from a Linear ticket. Reads the ticket, understands the plan phases, and executes changes with success criteria verification.
 tools:
   - Bash
   - Read
