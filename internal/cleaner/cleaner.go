@@ -14,7 +14,6 @@ import (
 func CleanAll(
 	rootDir string,
 	platforms config.PlatformsConfig,
-	targets config.TargetsConfig,
 	w io.Writer,
 ) error {
 	platformNames := make([]string, 0, len(platforms))
@@ -26,7 +25,7 @@ func CleanAll(
 	for _, platform := range platformNames {
 		platCfg := platforms[platform]
 
-		targetRoot := targets[platform]
+		targetRoot := platCfg.Target
 		if targetRoot == "" || targetRoot == "null" {
 			targetRoot = "."
 		}

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "platforms.schema.json",
+  "title": "Platforms Configuration",
+  "description": "Platform output paths, field drop rules, and type definitions for the ai-config transpiler.",
+  "type": "object",
+  "additionalProperties": false,
+  "patternProperties": {
+    "^[a-z][a-z0-9_-]*$": {
+      "$ref": "#/$defs/PlatformConfig"
+    }
+  },
+  "$defs": {
+    "PlatformConfig": {
+      "type": "object",
+      "required": ["target", "types"],
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "Output root directory for this platform. Absolute or relative to repo root."
+        },
+        "types": {
+          "type": "object",
+          "required": ["agents", "commands", "rules", "skills"],
+          "additionalProperties": false,
+          "properties": {
+            "agents":   { "$ref": "#/$defs/TypeConfig" },
+            "commands": { "$ref": "#/$defs/TypeConfig" },
+            "rules":    { "$ref": "#/$defs/TypeConfig" },
+            "skills":   { "$ref": "#/$defs/TypeConfig" }
+          }
+        },
+        "drop_fields": {
+          "type": "array",
+          "description": "Frontmatter fields to omit when transpiling for this platform.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "name", "description", "model", "context", "agent",
+              "path", "applyTo", "argument-hint",
+              "disable-model-invocation", "tools", "allowed-tools", "paths"
+            ]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "TypeConfig": {
+      "type": "object",
+      "required": ["path", "suffix"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Output directory path relative to the platform target root."
+        },
+        "suffix": {
+          "type": "string",
+          "description": "File suffix appended to output files (e.g. .md, .agent.md, .prompt.md)."
+        },
+        "extra_fields": {
+          "type": "object",
+          "description": "Additional frontmatter fields injected into every output file of this type.",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -17,7 +17,6 @@ type rootOpts struct {
 	srcDir    string
 	rootDir   string
 	platforms config.PlatformsConfig
-	targets   config.TargetsConfig
 	toolMap   config.ToolMap
 }
 
@@ -73,10 +72,6 @@ func loadConfigs(opts *rootOpts) error {
 	if err != nil {
 		return err
 	}
-	opts.targets, err = config.LoadTargets(filepath.Join(opts.rootDir, "config", "targets.yaml"))
-	if err != nil {
-		return err
-	}
 	opts.toolMap, err = config.LoadToolMap(filepath.Join(opts.rootDir, "config", "tool-map.yaml"))
 	if err != nil {
 		return err
@@ -95,7 +90,6 @@ func buildCmd(opts *rootOpts) *cobra.Command {
 			if err := transpiler.TranspileAll(
 				opts.srcDir,
 				opts.platforms,
-				opts.targets,
 				opts.toolMap,
 				opts.rootDir,
 				os.Stdout,
@@ -130,7 +124,7 @@ func cleanCmd(opts *rootOpts) *cobra.Command {
 		Use:   "clean",
 		Short: "Remove all generated output directories",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return cleaner.CleanAll(opts.rootDir, opts.platforms, opts.targets, os.Stdout)
+			return cleaner.CleanAll(opts.rootDir, opts.platforms, os.Stdout)
 		},
 	}
 }

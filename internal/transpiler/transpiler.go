@@ -135,7 +135,6 @@ func TranspileType(
 func TranspileAll(
 	srcDir string,
 	platforms config.PlatformsConfig,
-	targets config.TargetsConfig,
 	toolMap config.ToolMap,
 	rootDir string,
 	w io.Writer,
@@ -151,7 +150,7 @@ func TranspileAll(
 		platCfg := platforms[platform]
 		fmt.Fprintf(w, "[%s]\n", platform)
 
-		targetRoot := targets[platform]
+		targetRoot := platCfg.Target
 		if targetRoot == "" || targetRoot == "null" {
 			targetRoot = "."
 		}

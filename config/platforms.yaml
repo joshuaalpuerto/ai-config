@@ -1,5 +1,7 @@
+# yaml-language-server: $schema=../schemas/platforms.schema.json
 # Claude Code — canonical platform, passthrough
 claude:
+  target: .
   types:
     agents:
       path: .claude/agents
@@ -18,6 +20,7 @@ claude:
 
 # GitHub Copilot
 github:
+  target: .
   types:
     agents:
       path: .github/agents
@@ -44,7 +47,7 @@ github:
 # Future example:
 # gemini:
 #   types:
-#     agents:
+#     agents:`
 #       path: .gemini/agents
 #       suffix: .md
 #     rules:
