@@ -25,19 +25,16 @@ src/            # Canonical source definitions
   rules/        # Repository rules and guidelines
   skills/       # Reusable skills
 config/
-  platforms.yaml  # Output paths, field mappings, and drops per platform
+  platforms.yaml  # Output paths, target roots, field mappings, and drops per platform
   tool-map.yaml   # Canonical tool names → platform-specific equivalents
-  targets.yaml    # Output root directories per platform
-scripts/
-  build.sh        # Runs transpilation
-  clean.sh        # Removes generated files
-  validate.sh     # Validates source frontmatter
-  lib/transpile.sh  # Core transpilation logic
+schemas/
+  *.schema.json   # JSON Schema validation for each source type and config file
 ```
 
 ## Commands
 
 ```bash
+make install    # Build and install the aicfg binary
 make build      # Transpile all src/ files to platform outputs
 make clean      # Remove all generated files
 make validate   # Validate source file frontmatter
