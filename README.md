@@ -2,6 +2,45 @@
 
 A transpiler for AI assistant configurations. Write agent definitions, rules, commands, and skills once — generate platform-specific configs for Claude Code and GitHub Copilot automatically.
 
+## Installation
+
+Install the `aicfg` binary globally with Go (no cloning required):
+
+```bash
+go install github.com/joshuacalpuerto/ai-config/cmd/aicfg@latest
+```
+
+This installs `aicfg` to `~/go/bin`, making it available as a command anywhere on your machine. Ensure `~/go/bin` is on your `$PATH`:
+
+```bash
+# add to ~/.zshrc or ~/.bashrc
+export PATH="$HOME/go/bin:$PATH"
+```
+
+To run without installing:
+
+```bash
+go run github.com/joshuacalpuerto/ai-config/cmd/aicfg@latest build
+```
+
+### Using in your project
+
+Copy `config/` and `schemas/` from this repo into your project, create a `src/` directory with your definitions, then run `aicfg build` from your project root.
+
+```
+your-project/
+  config/
+    platforms.yaml
+    tool-map.yaml
+  schemas/
+    *.schema.json
+  src/
+    agents/
+    commands/
+    rules/
+    skills/
+```
+
 ## How it works
 
 Source files live in `src/` as Markdown with YAML frontmatter. The build system reads each file, maps tool names, resolves platform overrides, drops unsupported fields, and writes the result to the appropriate output directory.
