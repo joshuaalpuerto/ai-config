@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aicfg.schema.json",
+  "title": "aicfg Unified Configuration",
+  "description": "Single configuration file for the ai-config transpiler: platform output paths and canonical tool name mappings.",
+  "type": "object",
+  "required": ["platforms", "tool_map"],
+  "additionalProperties": false,
+  "properties": {
+    "platforms": {
+      "type": "object",
+      "description": "Platform output configuration keyed by platform name.",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_-]*$": { "$ref": "#/$defs/PlatformConfig" }
+      }
+    },
+    "tool_map": {
+      "type": "object",
+      "description": "Maps canonical tool names to platform-specific equivalents. Omit a tool to drop it for that platform.",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_-]*$": { "$ref": "#/$defs/PlatformToolMap" }
+      }
+    }
+  },
+  "$defs": {
+    "ToolName": {
+      "type": "string",
+      "description": "Canonical tool name.",
+      "enum": ["Bash","Read","Write","Edit","Glob","Grep","Agent","WebSearch","TaskCreate","TaskGet","TaskList","TaskUpdate"]
+    },
+    "PlatformConfig": {
+      "type": "object",
+      "required": ["target", "types"],
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "Output root directory for this platform. Absolute or relative to repo root."
+        },
+        "types": {
+          "type": "object",
+          "required": ["agents", "commands", "rules", "skills"],
+          "additionalProperties": false,
+          "properties": {
+            "agents":   { "$ref": "#/$defs/TypeConfig" },
+            "commands": { "$ref": "#/$defs/TypeConfig" },
+            "rules":    { "$ref": "#/$defs/TypeConfig" },
+            "skills":   { "$ref": "#/$defs/TypeConfig" }
+          }
+        },
+        "drop_fields": {
+          "type": "array",
+          "description": "Frontmatter fields to omit when transpiling for this platform.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "name", "description", "model", "context", "agent",
+              "path", "applyTo", "argument-hint",
+              "disable-model-invocation", "tools", "allowed-tools", "paths"
+            ]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "TypeConfig": {
+      "type": "object",
+      "required": ["path", "suffix"],
+      "additionalProperties": false,
+      "properties": {
+        "path":   { "type": "string", "description": "Output directory path relative to the platform target root." },
+        "suffix": { "type": "string", "description": "File suffix appended to output files (e.g. .md, .agent.md, .prompt.md)." },
+        "extra_fields": {
+          "type": "object",
+          "description": "Additional frontmatter fields injected verbatim for this type.",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "PlatformToolMap": {
+      "type": "object",
+      "description": "Canonical tool name → platform-specific tool name. Omit a key to drop that tool for this platform.",
+      "additionalProperties": false,
+      "properties": {
+        "Bash":       { "type": "string", "description": "Shell command execution." },
+        "Read":       { "type": "string", "description": "File read." },
+        "Write":      { "type": "string", "description": "File write." },
+        "Edit":       { "type": "string", "description": "File edit/patch." },
+        "Glob":       { "type": "string", "description": "File glob search." },
+        "Grep":       { "type": "string", "description": "Content search." },
+        "Agent":      { "type": "string", "description": "Sub-agent invocation." },
+        "WebSearch":  { "type": "string", "description": "Web search." },
+        "TaskCreate": { "type": "string", "description": "Create a task/todo." },
+        "TaskGet":    { "type": "string", "description": "Get a task/todo." },
+        "TaskList":   { "type": "string", "description": "List tasks/todos." },
+        "TaskUpdate": { "type": "string", "description": "Update a task/todo." }
+      }
+    }
+  }
+}

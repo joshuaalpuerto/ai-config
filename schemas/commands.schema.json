@@ -8,10 +8,11 @@
   "additionalProperties": false,
   "properties": {
     "description": { "type": "string" },
+    "argument-hint": { "type": "string" },
     "tools": {
       "type": "array",
       "uniqueItems": true,
-      "items": { "$ref": "tool-map.schema.json#/$defs/ToolName" }
+      "items": { "$ref": "aicfg.schema.json#/$defs/ToolName" }
     },
     "overrides": {
       "type": "object",
@@ -27,7 +28,7 @@
         "tools": {
           "type": "array",
           "uniqueItems": true,
-          "items": { "$ref": "tool-map.schema.json#/$defs/ToolName" }
+          "items": { "$ref": "aicfg.schema.json#/$defs/ToolName" }
         }
       }
     }
