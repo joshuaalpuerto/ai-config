@@ -25,15 +25,11 @@ go run github.com/joshuacalpuerto/ai-config/cmd/aicfg@latest build
 
 ### Using in your project
 
-Copy `config/` and `schemas/` from this repo into your project, create a `src/` directory with your definitions, then run `aicfg build` from your project root.
+Copy `aicfg.yaml` from this repo into your project root, create a `src/` directory with your definitions, then run `aicfg build` from your project root.
 
 ```
 your-project/
-  config/
-    platforms.yaml
-    tool-map.yaml
-  schemas/
-    *.schema.json
+  aicfg.yaml
   src/
     agents/
     commands/
@@ -58,16 +54,14 @@ src/ (canonical source)
 ## Project structure
 
 ```
+aicfg.yaml      # Unified config: platform output paths and tool name mappings
 src/            # Canonical source definitions
   agents/       # AI agent definitions
   commands/     # Custom commands
   rules/        # Repository rules and guidelines
   skills/       # Reusable skills
-config/
-  platforms.yaml  # Output paths, target roots, field mappings, and drops per platform
-  tool-map.yaml   # Canonical tool names → platform-specific equivalents
 schemas/
-  *.schema.json   # JSON Schema validation for each source type and config file
+  *.schema.json # JSON Schema validation for source types (embedded in binary)
 ```
 
 ## Commands
@@ -107,4 +101,4 @@ overrides:
 Agent instructions go here.
 ```
 
-Platform-specific behaviour is controlled through `overrides.<platform>.<field>`. Fields listed under `drop_fields` in `platforms.yaml` are omitted for that platform unless an override is present.
+Platform-specific behaviour is controlled through `overrides.<platform>.<field>`. Fields listed under `drop_fields` in `aicfg.yaml` are omitted for that platform unless an override is present.
