@@ -17,6 +17,12 @@ type PlatformConfig struct {
 // PlatformsConfig is the top-level structure of platforms.yaml.
 type PlatformsConfig map[string]PlatformConfig
 
-// ToolMap is the top-level structure of tool-map.yaml.
+// ToolMap is the top-level structure of the tool_map section.
 // Shape: map[platform]map[canonicalTool]mappedTool
 type ToolMap map[string]map[string]string
+
+// AicfgConfig is the top-level structure of aicfg.yaml.
+type AicfgConfig struct {
+	Platforms PlatformsConfig `yaml:"platforms"`
+	ToolMap   ToolMap         `yaml:"tool_map"`
+}

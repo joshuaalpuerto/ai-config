@@ -4,10 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
-	jsonschema "github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/joshuacalpuerto/ai-config/schemas"
 	"gopkg.in/yaml.v3"
 )
 
@@ -72,10 +71,9 @@ func ParseFile(path string) (fm Frontmatter, body string, hasFrontmatter bool, e
 }
 
 // ParseFileValidated is like ParseFile but validates the extracted frontmatter
-// YAML block against schemas/<typeName>.schema.json before unmarshalling.
-// schemasDir must be the absolute path to the schemas/ directory at the repo root.
+// YAML block against the embedded schema for typeName before unmarshalling.
 // Files with no frontmatter skip schema validation and are passed through unchanged.
-func ParseFileValidated(path, typeName, schemasDir string) (Frontmatter, string, bool, error) {
+func ParseFileValidated(path, typeName string) (Frontmatter, string, bool, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return Frontmatter{}, "", false, fmt.Errorf("reading %s: %w", path, err)
@@ -105,8 +103,7 @@ func ParseFileValidated(path, typeName, schemasDir string) (Frontmatter, string,
 	}
 
 	fmYAML := strings.Join(fmLines, "\n")
-	schemaFile := filepath.Join(schemasDir, typeName+".schema.json")
-	if err := validateFrontmatter([]byte(fmYAML), path, schemaFile); err != nil {
+	if err := validateFrontmatter([]byte(fmYAML), path, typeName); err != nil {
 		return Frontmatter{}, "", false, err
 	}
 
@@ -128,16 +125,19 @@ func ParseFileValidated(path, typeName, schemasDir string) (Frontmatter, string,
 	return fm, body, true, nil
 }
 
-// validateFrontmatter validates rawFMYAML against the JSON Schema at schemaFile.
-func validateFrontmatter(rawFMYAML []byte, srcFile, schemaFile string) error {
+// validateFrontmatter validates rawFMYAML against the embedded schema for typeName.
+func validateFrontmatter(rawFMYAML []byte, srcFile, typeName string) error {
 	var doc any
 	if err := yaml.Unmarshal(rawFMYAML, &doc); err != nil {
 		return fmt.Errorf("parsing frontmatter in %s: %w", srcFile, err)
 	}
-	c := jsonschema.NewCompiler()
-	sch, err := c.Compile(schemaFile)
+	c, err := schemas.NewCompiler()
 	if err != nil {
-		return fmt.Errorf("compiling schema %s: %w", schemaFile, err)
+		return fmt.Errorf("initialising schema compiler: %w", err)
+	}
+	sch, err := c.Compile(typeName + ".schema.json")
+	if err != nil {
+		return fmt.Errorf("compiling schema for %s: %w", typeName, err)
 	}
 	if err := sch.Validate(doc); err != nil {
 		return fmt.Errorf("%s: frontmatter schema violation: %w", srcFile, err)

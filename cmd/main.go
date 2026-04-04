@@ -14,10 +14,9 @@ import (
 )
 
 type rootOpts struct {
-	srcDir    string
-	rootDir   string
-	platforms config.PlatformsConfig
-	toolMap   config.ToolMap
+	srcDir  string
+	rootDir string
+	cfg     config.AicfgConfig
 }
 
 func main() {
@@ -68,11 +67,7 @@ func loadConfigs(opts *rootOpts) error {
 	}
 
 	var err error
-	opts.platforms, err = config.LoadPlatforms(filepath.Join(opts.rootDir, "config", "platforms.yaml"))
-	if err != nil {
-		return err
-	}
-	opts.toolMap, err = config.LoadToolMap(filepath.Join(opts.rootDir, "config", "tool-map.yaml"))
+	opts.cfg, err = config.LoadConfig(filepath.Join(opts.rootDir, "aicfg.yaml"))
 	if err != nil {
 		return err
 	}
@@ -89,8 +84,8 @@ func buildCmd(opts *rootOpts) *cobra.Command {
 			fmt.Println()
 			if err := transpiler.TranspileAll(
 				opts.srcDir,
-				opts.platforms,
-				opts.toolMap,
+				opts.cfg.Platforms,
+				opts.cfg.ToolMap,
 				opts.rootDir,
 				os.Stdout,
 			); err != nil {
@@ -108,7 +103,7 @@ func validateCmd(opts *rootOpts) *cobra.Command {
 		Use:   "validate",
 		Short: "Validate all source files",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			result := validator.ValidateAll(opts.srcDir, opts.platforms, opts.toolMap, os.Stdout)
+			result := validator.ValidateAll(opts.srcDir, opts.cfg.Platforms, opts.cfg.ToolMap, os.Stdout)
 			if result.Errors > 0 {
 				fmt.Printf("\n%d error(s), %d warning(s) found.\n", result.Errors, result.Warnings)
 				os.Exit(1)
@@ -124,7 +119,7 @@ func cleanCmd(opts *rootOpts) *cobra.Command {
 		Use:   "clean",
 		Short: "Remove all generated output directories",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return cleaner.CleanAll(opts.rootDir, opts.platforms, os.Stdout)
+			return cleaner.CleanAll(opts.rootDir, opts.cfg.Platforms, os.Stdout)
 		},
 	}
 }

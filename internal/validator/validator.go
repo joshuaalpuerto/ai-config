@@ -26,7 +26,6 @@ func ValidateAll(
 	w io.Writer,
 ) Result {
 	var result Result
-	schemasDir := filepath.Join(filepath.Dir(srcDir), "schemas")
 
 	validPlatforms := make(map[string]bool, len(platforms))
 	platformList := make([]string, 0, len(platforms))
@@ -77,7 +76,7 @@ func ValidateAll(
 		for _, srcFile := range mdFiles {
 			relPath, _ := filepath.Rel(filepath.Dir(srcDir), srcFile)
 
-			fm, _, hasFrontmatter, parseErr := frontmatter.ParseFileValidated(srcFile, typeName, schemasDir)
+			fm, _, hasFrontmatter, parseErr := frontmatter.ParseFileValidated(srcFile, typeName)
 			if parseErr != nil {
 				fmt.Fprintf(w, "ERROR: %s — %s\n", relPath, parseErr)
 				result.Errors++

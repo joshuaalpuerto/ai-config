@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=schemas/aicfg.schema.json
+
+platforms:
+  # Claude Code — canonical platform, passthrough
+  claude:
+    target: .
+    types:
+      agents:
+        path: .claude/agents
+        suffix: .md
+      rules:
+        path: .claude/rules
+        suffix: .md
+      commands:
+        path: .claude/commands
+        suffix: .md
+      skills:
+        path: .claude/skills
+        suffix: .md
+    drop_fields:
+      - applyTo
+
+  # GitHub Copilot
+  github:
+    target: .
+    types:
+      agents:
+        path: .github/agents
+        suffix: .agent.md
+      rules:
+        path: .github/instructions
+        suffix: .instructions.md
+      commands:
+        path: .github/prompts
+        suffix: .prompt.md
+        extra_fields:
+          agent: agent
+      skills:
+        path: .github/skills
+        suffix: .md
+    drop_fields:
+      - model
+      - context
+      - agent
+      - disable-model-invocation
+      - paths
+      - path
+
+tool_map:
+  github:
+    Bash: execute
+    Read: read
+    Write: edit
+    Edit: edit
+    Glob: search
+    Grep: search
+    Agent: agent
+    WebSearch: web/fetch
+    TaskCreate: todo
+    TaskGet: todo
+    TaskList: todo
+    TaskUpdate: todo
+    # Tools with no mapping are dropped (Claude-only)
+    # NotebookEdit: (absent = dropped)
+    # LSP: (absent = dropped)
