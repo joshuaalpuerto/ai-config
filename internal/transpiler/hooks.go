@@ -7,41 +7,10 @@ import (
 	"path/filepath"
 
 	"github.com/joshuacalpuerto/ai-config/internal/config"
+	"github.com/joshuacalpuerto/ai-config/internal/hooks"
 	"github.com/joshuacalpuerto/ai-config/schemas"
 	"gopkg.in/yaml.v3"
 )
-
-type hookSource struct {
-	Version  string        `yaml:"version"`
-	Rules    []hookRule    `yaml:"rules"`
-	Settings *hookSettings `yaml:"settings,omitempty"`
-}
-
-type hookRule struct {
-	Name        string       `yaml:"name"`
-	Description string       `yaml:"description,omitempty"`
-	Mode        string       `yaml:"mode,omitempty"`
-	Matchers    hookMatchers `yaml:"matchers"`
-	Actions     hookActions  `yaml:"actions"`
-}
-
-type hookMatchers struct {
-	Tools        []string `yaml:"tools,omitempty"`
-	CommandMatch string   `yaml:"command_match,omitempty"`
-	Extensions   []string `yaml:"extensions,omitempty"`
-	Directories  []string `yaml:"directories,omitempty"`
-}
-
-type hookActions struct {
-	Block        *bool  `yaml:"block,omitempty"`
-	BlockMessage string `yaml:"block_message,omitempty"`
-	Inject       string `yaml:"inject,omitempty"`
-	InjectInline string `yaml:"inject_inline,omitempty"`
-}
-
-type hookSettings struct {
-	FailOpen *bool `yaml:"fail_open,omitempty"`
-}
 
 // TranspileHooks validates, transforms, and deploys hooks.yaml for one platform.
 // Silently skips when hooks.yaml is absent (it is optional).
@@ -69,7 +38,7 @@ func TranspileHooks(
 		return fmt.Errorf("validating hooks.yaml: %w", err)
 	}
 
-	var src hookSource
+	var src hooks.HooksConfig
 	if err := yaml.Unmarshal(data, &src); err != nil {
 		return fmt.Errorf("parsing hooks.yaml: %w", err)
 	}
