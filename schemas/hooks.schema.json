@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hooks.schema.json",
+  "title": "RuleZ Hooks Configuration",
+  "description": "Policy rules evaluated by aicfg hooks on every AI action.",
+  "type": "object",
+  "required": ["version", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "rules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Rule" }
+    },
+    "settings": { "$ref": "#/$defs/Settings" }
+  },
+  "$defs": {
+    "CanonicalTool": {
+      "type": "string",
+      "enum": ["Bash", "Read", "Write", "Edit", "WebFetch"]
+    },
+    "PolicyMode": {
+      "type": "string",
+      "enum": ["enforce", "warn", "audit"],
+      "default": "enforce"
+    },
+    "Rule": {
+      "type": "object",
+      "required": ["name", "matchers", "actions"],
+      "additionalProperties": false,
+      "properties": {
+        "name":        { "type": "string", "pattern": "^[a-zA-Z0-9_-]+$" },
+        "description": { "type": "string" },
+        "mode":        { "$ref": "#/$defs/PolicyMode" },
+        "matchers":    { "$ref": "#/$defs/Matchers" },
+        "actions":     { "$ref": "#/$defs/Actions" }
+      }
+    },
+    "Matchers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tools":         { "type": "array", "items": { "$ref": "#/$defs/CanonicalTool" } },
+        "command_match": { "type": "string", "description": "Regex matched against tool_input.command (Bash only)." },
+        "extensions":    { "type": "array", "items": { "type": "string" } },
+        "directories":   { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Actions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "block":         { "type": "boolean" },
+        "block_message": { "type": "string" },
+        "inject":        { "type": "string", "description": "Path relative to repo root (e.g. context/standards.md)." },
+        "inject_inline": { "type": "string" }
+      }
+    },
+    "Settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fail_open": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}

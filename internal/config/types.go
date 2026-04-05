@@ -7,11 +7,18 @@ type TypeConfig struct {
 	ExtraFields map[string]string `yaml:"extra_fields,omitempty"`
 }
 
+// HooksConfig declares where to deploy hooks artifacts for a platform.
+type HooksConfig struct {
+	HooksFile  string `yaml:"hooks_file"`
+	ContextDir string `yaml:"context_dir"`
+}
+
 // PlatformConfig represents one platform block in platforms.yaml.
 type PlatformConfig struct {
 	Target     string                `yaml:"target"`
 	Types      map[string]TypeConfig `yaml:"types"`
 	DropFields []string              `yaml:"drop_fields"`
+	Hooks      *HooksConfig          `yaml:"hooks,omitempty"`
 }
 
 // PlatformsConfig is the top-level structure of platforms.yaml.

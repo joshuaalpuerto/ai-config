@@ -52,6 +52,23 @@ func CleanAll(
 				fmt.Fprintf(w, "  removed %s\n", fullPath)
 			}
 		}
+
+		if platCfg.Hooks != nil {
+			hooksDest := filepath.Join(targetRoot, platCfg.Hooks.HooksFile)
+			if _, err := os.Stat(hooksDest); err == nil {
+				if err := os.Remove(hooksDest); err != nil {
+					return fmt.Errorf("removing %s: %w", hooksDest, err)
+				}
+				fmt.Fprintf(w, "  removed %s\n", hooksDest)
+			}
+			contextDest := filepath.Join(targetRoot, platCfg.Hooks.ContextDir)
+			if _, err := os.Stat(contextDest); err == nil {
+				if err := os.RemoveAll(contextDest); err != nil {
+					return fmt.Errorf("removing %s: %w", contextDest, err)
+				}
+				fmt.Fprintf(w, "  removed %s\n", contextDest)
+			}
+		}
 	}
 
 	fmt.Fprintln(w, "Clean complete.")

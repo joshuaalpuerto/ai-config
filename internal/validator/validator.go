@@ -10,6 +10,7 @@ import (
 
 	"github.com/joshuacalpuerto/ai-config/internal/config"
 	"github.com/joshuacalpuerto/ai-config/internal/frontmatter"
+	"github.com/joshuacalpuerto/ai-config/schemas"
 )
 
 // Result holds the error and warning counts from a validation run.
@@ -128,4 +129,41 @@ func isEmptyFrontmatter(fm frontmatter.Frontmatter) bool {
 		len(fm.AllowedTools) == 0 &&
 		len(fm.Paths) == 0 &&
 		len(fm.Overrides) == 0
+}
+
+// ValidateHooks validates hooks.yaml against hooks.schema.json when at least one
+// platform has hooks configured. Emits a warning (not an error) if hooks are
+// configured in aicfg.yaml but hooks.yaml is absent — the file is optional.
+func ValidateHooks(rootDir string, platforms config.PlatformsConfig, w io.Writer) Result {
+	var result Result
+
+	hasHooksPlatform := false
+	for _, platCfg := range platforms {
+		if platCfg.Hooks != nil {
+			hasHooksPlatform = true
+			break
+		}
+	}
+	if !hasHooksPlatform {
+		return result
+	}
+
+	hooksPath := filepath.Join(rootDir, "hooks.yaml")
+	data, err := os.ReadFile(hooksPath)
+	if os.IsNotExist(err) {
+		fmt.Fprintf(w, "WARNING: hooks configured in aicfg.yaml but hooks.yaml not found at %s\n", hooksPath)
+		result.Warnings++
+		return result
+	}
+	if err != nil {
+		fmt.Fprintf(w, "ERROR: %s — %s\n", hooksPath, err)
+		result.Errors++
+		return result
+	}
+
+	if err := schemas.ValidateHooksSchema(data, hooksPath); err != nil {
+		fmt.Fprintf(w, "ERROR: %s — %s\n", hooksPath, err)
+		result.Errors++
+	}
+	return result
 }

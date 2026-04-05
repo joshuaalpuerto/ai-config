@@ -32,7 +32,7 @@
     "ToolName": {
       "type": "string",
       "description": "Canonical tool name.",
-      "enum": ["Bash","Read","Write","Edit","Glob","Grep","Agent","WebSearch","TaskCreate","TaskGet","TaskList","TaskUpdate"]
+      "enum": ["Bash","Read","Write","Edit","Glob","Grep","Agent","WebSearch","WebFetch","TaskCreate","TaskGet","TaskList","TaskUpdate"]
     },
     "PlatformConfig": {
       "type": "object",
@@ -66,6 +66,16 @@
             ]
           },
           "uniqueItems": true
+        },
+        "hooks": {
+          "type": "object",
+          "description": "Hooks deployment configuration for this platform.",
+          "additionalProperties": false,
+          "required": ["hooks_file", "context_dir"],
+          "properties": {
+            "hooks_file":  { "type": "string", "description": "Output path for transformed hooks.yaml, relative to target root." },
+            "context_dir": { "type": "string", "description": "Output directory for context files, relative to target root." }
+          }
         }
       }
     },
@@ -96,6 +106,7 @@
         "Grep":       { "type": "string", "description": "Content search." },
         "Agent":      { "type": "string", "description": "Sub-agent invocation." },
         "WebSearch":  { "type": "string", "description": "Web search." },
+        "WebFetch":   { "type": "string", "description": "Web fetch/request." },
         "TaskCreate": { "type": "string", "description": "Create a task/todo." },
         "TaskGet":    { "type": "string", "description": "Get a task/todo." },
         "TaskList":   { "type": "string", "description": "List tasks/todos." },

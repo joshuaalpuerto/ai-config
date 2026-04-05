@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v6"
+	"gopkg.in/yaml.v3"
 )
 
 //go:embed *.schema.json
@@ -39,4 +40,21 @@ func NewCompiler() (*jsonschema.Compiler, error) {
 		return nil, fmt.Errorf("registering embedded schemas: %w", err)
 	}
 	return c, nil
+}
+
+// ValidateHooksSchema validates rawYAML against the embedded hooks.schema.json.
+func ValidateHooksSchema(rawYAML []byte, filePath string) error {
+	var doc any
+	if err := yaml.Unmarshal(rawYAML, &doc); err != nil {
+		return fmt.Errorf("parsing %s: %w", filePath, err)
+	}
+	c, err := NewCompiler()
+	if err != nil {
+		return fmt.Errorf("initialising schema compiler: %w", err)
+	}
+	sch, err := c.Compile("hooks.schema.json")
+	if err != nil {
+		return fmt.Errorf("compiling hooks.schema.json: %w", err)
+	}
+	return sch.Validate(doc)
 }
