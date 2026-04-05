@@ -1,0 +1,15 @@
+- name: python-coding-standards
+  description: "Inject Python coding standards when editing Python files"
+  matchers:
+    tools: ["Edit", "Write"]
+    extensions: [".py", ".pyi"]
+  actions:
+    inject: "context/python-standards.md"
+    
+- name: api-design-guidelines
+  description: "Inject REST API design guidelines for API routes"
+  matchers:
+    tools: ["Edit", "Write"]
+    directories: ["src/api/**", "routes/**"]
+  actions:
+    inject: "context/api-design-guidelines.md"
