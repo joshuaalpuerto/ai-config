@@ -4,9 +4,13 @@
   "title": "aicfg Unified Configuration",
   "description": "Single configuration file for the ai-config transpiler: platform output paths and canonical tool name mappings.",
   "type": "object",
-  "required": ["platforms", "tool_map"],
+  "required": ["src_dir", "platforms", "tool_map"],
   "additionalProperties": false,
   "properties": {
+    "src_dir": {
+      "type": "string",
+      "description": "Source directory containing agent/command/rule/skill files. Relative to repo root or absolute."
+    },
     "platforms": {
       "type": "object",
       "description": "Platform output configuration keyed by platform name.",

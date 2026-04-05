@@ -31,7 +31,6 @@ func main() {
 	}
 
 	rootCmd.PersistentFlags().StringVar(&opts.rootDir, "root", "", "repo root directory (default: directory of binary or cwd)")
-	rootCmd.PersistentFlags().StringVar(&opts.srcDir, "src", "", "source directory (default: $SRC_DIR env, then <root>/src)")
 
 	rootCmd.AddCommand(
 		buildCmd(opts),
@@ -53,23 +52,22 @@ func loadConfigs(opts *rootOpts) error {
 		opts.rootDir = cwd
 	}
 
-	// Resolve source directory: --src flag > $SRC_DIR env > <root>/src.
-	if opts.srcDir == "" {
-		if envSrc := os.Getenv("SRC_DIR"); envSrc != "" {
-			opts.srcDir = envSrc
-		} else {
-			opts.srcDir = filepath.Join(opts.rootDir, "src")
-		}
-	}
-
-	if _, err := os.Stat(opts.srcDir); err != nil {
-		return fmt.Errorf("source directory %q not found: %w", opts.srcDir, err)
-	}
-
+	// Load config first so src_dir can influence source directory resolution.
 	var err error
 	opts.cfg, err = config.LoadConfig(filepath.Join(opts.rootDir, "aicfg.yaml"))
 	if err != nil {
 		return err
+	}
+
+	// Resolve source directory from src_dir in aicfg.yaml.
+	if filepath.IsAbs(opts.cfg.SrcDir) {
+		opts.srcDir = opts.cfg.SrcDir
+	} else {
+		opts.srcDir = filepath.Join(opts.rootDir, opts.cfg.SrcDir)
+	}
+
+	if _, err := os.Stat(opts.srcDir); err != nil {
+		return fmt.Errorf("source directory %q not found: %w", opts.srcDir, err)
 	}
 	return nil
 }

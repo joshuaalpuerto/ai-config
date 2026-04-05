@@ -23,6 +23,7 @@ type ToolMap map[string]map[string]string
 
 // AicfgConfig is the top-level structure of aicfg.yaml.
 type AicfgConfig struct {
+	SrcDir    string          `yaml:"src_dir"`
 	Platforms PlatformsConfig `yaml:"platforms"`
 	ToolMap   ToolMap         `yaml:"tool_map"`
 }
