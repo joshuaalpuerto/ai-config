@@ -7,12 +7,11 @@ import (
 	"path/filepath"
 )
 
-const hookCommand = "aicfg hooks"
-
 // MergeClaudeSettings reads .claude/settings.json (if present), injects the
 // PreToolUse aicfg hooks entry, and writes back atomically.
 // All existing top-level keys are preserved. Idempotent on repeated runs.
-func MergeClaudeSettings(claudeDir string) error {
+// platform is the value passed to --platform (e.g. "claude").
+func MergeClaudeSettings(claudeDir, platform string) error {
 	path := filepath.Join(claudeDir, "settings.json")
 
 	existing := map[string]any{}
@@ -23,7 +22,7 @@ func MergeClaudeSettings(claudeDir string) error {
 	}
 
 	hooksMap := resolveHooksMap(existing)
-	hooksMap["PreToolUse"] = buildPreToolUseEntry()
+	hooksMap["PreToolUse"] = buildPreToolUseEntry(platform)
 	existing["hooks"] = hooksMap
 
 	out, err := json.MarshalIndent(existing, "", "  ")
@@ -49,13 +48,13 @@ func resolveHooksMap(root map[string]any) map[string]any {
 	return map[string]any{}
 }
 
-func buildPreToolUseEntry() []any {
+func buildPreToolUseEntry(platform string) []any {
 	return []any{
 		map[string]any{
 			"hooks": []any{
 				map[string]any{
 					"type":    "command",
-					"command": hookCommand,
+					"command": fmt.Sprintf("aicfg hooks --platform %s", platform),
 				},
 			},
 		},

@@ -18,9 +18,10 @@ import (
 )
 
 type rootOpts struct {
-	srcDir  string
-	rootDir string
-	cfg     config.AicfgConfig
+	srcDir   string
+	rootDir  string
+	platform string
+	cfg      config.AicfgConfig
 }
 
 func main() {
@@ -32,12 +33,13 @@ func main() {
 	}
 
 	rootCmd.PersistentFlags().StringVar(&opts.rootDir, "root", "", "repo root directory (default: directory of binary or cwd)")
+	rootCmd.PersistentFlags().StringVar(&opts.platform, "platform", "claude", "target platform for hook output format (claude, github, gemini)")
 
 	rootCmd.AddCommand(
 		buildCmd(opts),
 		validateCmd(opts),
 		cleanCmd(opts),
-		hooksCmd(),
+		hooksCmd(opts),
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -97,7 +99,7 @@ func buildCmd(opts *rootOpts) *cobra.Command {
 
 			if claudePlatform, ok := opts.cfg.Platforms["claude"]; ok && claudePlatform.Hooks != nil {
 				claudeDir := filepath.Join(opts.rootDir, ".claude")
-				if err := settings.MergeClaudeSettings(claudeDir); err != nil {
+				if err := settings.MergeClaudeSettings(claudeDir, opts.platform); err != nil {
 					return fmt.Errorf("updating .claude/settings.json: %w", err)
 				}
 				fmt.Println("  settings.json: PreToolUse hook registered")
@@ -144,25 +146,26 @@ func cleanCmd(opts *rootOpts) *cobra.Command {
 	}
 }
 
-func hooksCmd() *cobra.Command {
+func hooksCmd(opts *rootOpts) *cobra.Command {
 	var hooksFilePath string
 
 	cmd := &cobra.Command{
 		Use:   "hooks",
 		Short: "Evaluate PreToolUse hook event from stdin",
-		Long:  "Reads a Claude Code PreToolUse JSON event from stdin, evaluates configured rules, and exits 0 (allow) or 2 (block).",
+		Long:  "Reads a hook event from stdin, evaluates configured rules, and writes platform-specific output to stdout.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runHooks(hooksFilePath)
+			return runHooks(hooksFilePath, opts.platform)
 		},
 	}
 	cmd.Flags().StringVar(&hooksFilePath, "config", ".claude/hooks.yaml", "path to deployed hooks.yaml")
 	return cmd
 }
 
-// runHooks reads a PreToolUse JSON event from stdin, evaluates rules from the deployed
-// hooks.yaml, and exits 0 (allow) or 2 (block). Errors are fail-open: diagnostic written
-// to stderr, exit 0, so Claude is never blocked by a broken hook configuration.
-func runHooks(hooksFilePath string) error {
+// runHooks reads a hook event from stdin, evaluates rules from the deployed hooks.yaml,
+// and writes platform-specific output. Evaluation errors are fail-open: diagnostic written
+// to stderr, exit 0, so the AI assistant is never blocked by a broken hook configuration.
+// Platform misconfiguration (unknown platform) is fail-loud: exits 1.
+func runHooks(hooksFilePath, platform string) error {
 	data, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "aicfg hooks: reading stdin: %v\n", err)
@@ -190,15 +193,14 @@ func runHooks(hooksFilePath string) error {
 		return nil // fail-open on engine errors
 	}
 
-	if !resp.Continue {
-		fmt.Fprintln(os.Stderr, resp.Context)
-		os.Exit(2)
+	stdout, stderr, exitCode := hooks.FormatOutput(hooks.Platform(platform), event, resp)
+	if stderr != "" {
+		fmt.Fprintln(os.Stderr, stderr)
 	}
-
-	if resp.Context != "" {
-		out, _ := json.Marshal(resp)
-		fmt.Println(string(out))
+	if len(stdout) > 0 {
+		fmt.Println(string(stdout))
 	}
+	os.Exit(exitCode)
 
 	return nil
 }
