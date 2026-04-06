@@ -24,7 +24,8 @@ func TranspileHooks(
 	targetRoot string,
 	w io.Writer,
 ) error {
-	srcPath := filepath.Join(rootDir, "hooks.yaml")
+	srcFile := hooksCfg.SrcHooksFile
+	srcPath := filepath.Join(rootDir, srcFile)
 	if _, err := os.Stat(srcPath); os.IsNotExist(err) {
 		return nil
 	}

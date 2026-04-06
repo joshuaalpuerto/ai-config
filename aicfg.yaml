@@ -21,6 +21,10 @@ platforms:
         suffix: .md
     drop_fields:
       - applyTo
+    hooks:
+      src_hooks_file: hooks.yaml
+      hooks_file: .claude/hooks.yaml
+      context_dir: .claude/context
 
   # GitHub Copilot
   github:
