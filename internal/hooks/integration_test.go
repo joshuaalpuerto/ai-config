@@ -5,47 +5,12 @@ package hooks
 // Each test writes a temporary hooks.yaml, loads it, and evaluates a real event.
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
-// intCfg writes hooks.yaml to a temp dir, loads it, and returns the config.
-// It resets the loader cache so that tests are fully isolated.
-func intCfg(t *testing.T, yaml string) HooksConfig {
-	t.Helper()
-	resetCache()
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "hooks.yaml")
-	if err := os.WriteFile(path, []byte(yaml), 0o644); err != nil {
-		t.Fatalf("writing hooks.yaml: %v", err)
-	}
-	cfg, _, err := LoadConfig(path)
-	if err != nil {
-		t.Fatalf("LoadConfig: %v", err)
-	}
-	return cfg
-}
-
 // --- Bash tool ---
-// Claude Code sends: { "command": "...", "description": "...", "timeout": N, "run_in_background": false }
-
-func newBashEvent(command, description string) Event {
-	input, _ := json.Marshal(map[string]any{
-		"command":           command,
-		"description":       description,
-		"timeout":           120000,
-		"run_in_background": false,
-	})
-	return Event{
-		HookEventName: EventPreToolUse,
-		SessionID:     "int-test",
-		ToolName:      "Bash",
-		CWD:           "/home/user/my-project",
-		ToolInput:     input,
-	}
-}
 
 func TestIntegration_Bash_BlockForcePush(t *testing.T) {
 	cfg := intCfg(t, `
@@ -155,20 +120,6 @@ rules:
 // --- Write tool ---
 // Claude Code sends: { "file_path": "/abs/path/file.ext", "content": "..." }
 
-func newWriteEvent(filePath, content string) Event {
-	input, _ := json.Marshal(map[string]string{
-		"file_path": filePath,
-		"content":   content,
-	})
-	return Event{
-		HookEventName: EventPreToolUse,
-		SessionID:     "int-test",
-		ToolName:      "Write",
-		CWD:           "/home/user/my-project",
-		ToolInput:     input,
-	}
-}
-
 func TestIntegration_Write_BlockEnvFile(t *testing.T) {
 	cfg := intCfg(t, `
 version: "1.0"
@@ -242,22 +193,6 @@ rules:
 // --- Edit tool ---
 // Claude Code sends: { "file_path": "...", "old_string": "...", "new_string": "...", "replace_all": false }
 
-func newEditEvent(filePath, oldString, newString string) Event {
-	input, _ := json.Marshal(map[string]any{
-		"file_path":   filePath,
-		"old_string":  oldString,
-		"new_string":  newString,
-		"replace_all": false,
-	})
-	return Event{
-		HookEventName: EventPreToolUse,
-		SessionID:     "int-test",
-		ToolName:      "Edit",
-		CWD:           "/home/user/my-project",
-		ToolInput:     input,
-	}
-}
-
 func TestIntegration_Edit_InjectInlineForPython(t *testing.T) {
 	cfg := intCfg(t, `
 version: "1.0"
@@ -325,21 +260,6 @@ rules:
 // --- Read tool ---
 // Claude Code sends: { "file_path": "...", "offset": N, "limit": N }
 
-func newReadEvent(filePath string) Event {
-	input, _ := json.Marshal(map[string]any{
-		"file_path": filePath,
-		"offset":    0,
-		"limit":     50,
-	})
-	return Event{
-		HookEventName: EventPreToolUse,
-		SessionID:     "int-test",
-		ToolName:      "Read",
-		CWD:           "/home/user/my-project",
-		ToolInput:     input,
-	}
-}
-
 func TestIntegration_Read_BlockEnvFile(t *testing.T) {
 	cfg := intCfg(t, `
 version: "1.0"
@@ -397,20 +317,6 @@ rules:
 
 // --- WebFetch tool ---
 // Claude Code sends: { "url": "https://...", "prompt": "..." }
-
-func newWebFetchEvent(url, prompt string) Event {
-	input, _ := json.Marshal(map[string]string{
-		"url":    url,
-		"prompt": prompt,
-	})
-	return Event{
-		HookEventName: EventPreToolUse,
-		SessionID:     "int-test",
-		ToolName:      "WebFetch",
-		CWD:           "/home/user/my-project",
-		ToolInput:     input,
-	}
-}
 
 func TestIntegration_WebFetch_BlockAllExternalFetches(t *testing.T) {
 	cfg := intCfg(t, `

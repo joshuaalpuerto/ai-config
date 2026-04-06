@@ -7,27 +7,6 @@ import (
 	"time"
 )
 
-func writeTempHooksYAML(t *testing.T, dir, content string) string {
-	t.Helper()
-	path := filepath.Join(dir, "hooks.yaml")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("writing temp hooks.yaml: %v", err)
-	}
-	return path
-}
-
-const minimalHooksYAML = `
-version: "1.0"
-rules:
-  - name: block-force-push
-    matchers:
-      tools: [Bash]
-      command_match: "git push.*--force"
-    actions:
-      block: true
-      block_message: "Force-pushing is not allowed."
-`
-
 func TestLoadConfig_MissingFile_FailOpen(t *testing.T) {
 	resetCache()
 	_, failOpen, err := LoadConfig("/nonexistent/path/hooks.yaml")

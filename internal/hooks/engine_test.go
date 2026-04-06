@@ -1,45 +1,10 @@
 package hooks
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 )
-
-// --- helpers ---
-
-func boolPtr(b bool) *bool { return &b }
-
-func bashEvent(command string) Event {
-	input, _ := json.Marshal(map[string]string{"command": command})
-	return Event{
-		HookEventName: EventPreToolUse,
-		SessionID:     "test",
-		ToolName:      "Bash",
-		ToolInput:     input,
-	}
-}
-
-func fileEvent(tool, filePath string) Event {
-	input, _ := json.Marshal(map[string]string{"file_path": filePath})
-	return Event{
-		HookEventName: EventPreToolUse,
-		SessionID:     "test",
-		ToolName:      tool,
-		ToolInput:     input,
-	}
-}
-
-func webFetchEvent(url string) Event {
-	input, _ := json.Marshal(map[string]string{"url": url, "prompt": "extract endpoints"})
-	return Event{
-		HookEventName: EventPreToolUse,
-		SessionID:     "test",
-		ToolName:      "WebFetch",
-		ToolInput:     input,
-	}
-}
 
 // --- matchesRule ---
 
