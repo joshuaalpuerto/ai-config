@@ -4,14 +4,19 @@ import "encoding/json"
 
 type EventType string
 
-const EventPreToolUse EventType = "PreToolUse"
+const (
+	EventPreToolUse  EventType = "PreToolUse"
+	EventPostToolUse EventType = "PostToolUse"
+)
 
-// Event is the JSON payload Claude Code sends via stdin on each tool use.
+// Event is the JSON payload Claude Code sends via stdin on each tool use event.
 type Event struct {
 	HookEventName EventType       `json:"hook_event_name"`
 	SessionID     string          `json:"session_id"`
 	ToolName      string          `json:"tool_name"`
 	ToolInput     json.RawMessage `json:"tool_input,omitempty"`
+	ToolResponse  json.RawMessage `json:"tool_response,omitempty"`
+	ToolUseID     string          `json:"tool_use_id,omitempty"`
 	CWD           string          `json:"cwd,omitempty"`
 }
 
@@ -31,12 +36,13 @@ const (
 
 // HooksConfig is the top-level structure of the deployed hooks.yaml.
 type HooksConfig struct {
-	Version    string    `yaml:"version"`
-	PreToolUse []Rule    `yaml:"PreToolUse"`
-	Settings   *Settings `yaml:"settings,omitempty"`
+	Version     string    `yaml:"version"`
+	PreToolUse  []Rule    `yaml:"PreToolUse"`
+	PostToolUse []Rule    `yaml:"PostToolUse"`
+	Settings    *Settings `yaml:"settings,omitempty"`
 }
 
-// Rule is one policy entry under a PreToolUse event in hooks.yaml.
+// Rule is one policy entry under a hook event (PreToolUse or PostToolUse) in hooks.yaml.
 type Rule struct {
 	Mode   string   `yaml:"mode,omitempty"`
 	Match  Matchers `yaml:"match"`

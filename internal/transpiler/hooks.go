@@ -47,10 +47,8 @@ func TranspileHooks(
 	platformToolMap := toolMap[platform]
 	contextDirAbs := filepath.Join(targetRoot, hooksCfg.ContextDir)
 
-	for i := range src.PreToolUse {
-		src.PreToolUse[i].Match.Tools = translateTools(src.PreToolUse[i].Match.Tools, platformToolMap)
-		src.PreToolUse[i].Action.Inject = translateInjectPath(src.PreToolUse[i].Action.Inject, contextDirAbs)
-	}
+	transformRules(src.PreToolUse, platformToolMap, contextDirAbs)
+	transformRules(src.PostToolUse, platformToolMap, contextDirAbs)
 
 	out, err := yaml.Marshal(&src)
 	if err != nil {
@@ -64,6 +62,15 @@ func TranspileHooks(
 
 	fmt.Fprintf(w, "  hooks: deployed to %s\n", destPath)
 	return nil
+}
+
+// transformRules applies tool and inject path transformations to a rule slice.
+// This helper makes it easy to add new event types without duplicating loop logic.
+func transformRules(rules []hooks.Rule, platformToolMap map[string]string, contextDirAbs string) {
+	for i := range rules {
+		rules[i].Match.Tools = translateTools(rules[i].Match.Tools, platformToolMap)
+		rules[i].Action.Inject = translateInjectPath(rules[i].Action.Inject, contextDirAbs)
+	}
 }
 
 // translateTools maps canonical tool names to platform-specific equivalents.

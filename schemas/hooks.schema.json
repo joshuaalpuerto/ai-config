@@ -4,11 +4,15 @@
   "title": "RuleZ Hooks Configuration",
   "description": "Policy rules evaluated by aicfg hooks on every AI action.",
   "type": "object",
-  "required": ["version", "PreToolUse"],
+  "required": ["version"],
   "additionalProperties": false,
   "properties": {
     "version": { "type": "string", "const": "1" },
     "PreToolUse": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Rule" }
+    },
+    "PostToolUse": {
       "type": "array",
       "items": { "$ref": "#/$defs/Rule" }
     },

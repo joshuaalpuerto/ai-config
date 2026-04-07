@@ -11,14 +11,16 @@ import (
 	"strings"
 )
 
-// Evaluate runs all rules against event sequentially and returns the final Response.
+// Evaluate runs all matching rules for the given event and returns the final Response.
+// Supports PreToolUse and PostToolUse events.
 // Block in Enforce mode short-circuits immediately. Injections from multiple rules
 // accumulate separated by "\n\n". Warn mode converts blocks to injected warnings.
 // Audit mode skips all blocks and injections.
 func Evaluate(event Event, cfg HooksConfig) (Response, error) {
+	rules := getRulesForEvent(event, cfg)
 	var accumulated string
 
-	for _, rule := range cfg.PreToolUse {
+	for _, rule := range rules {
 		if !matchesRule(event, rule) {
 			continue
 		}
@@ -50,6 +52,20 @@ func Evaluate(event Event, cfg HooksConfig) (Response, error) {
 	}
 
 	return Response{Continue: true, Context: accumulated}, nil
+}
+
+// getRulesForEvent selects the appropriate rule set based on event type.
+// Returns an empty slice if the event type is unknown (fail-open behavior).
+func getRulesForEvent(event Event, cfg HooksConfig) []Rule {
+	switch event.HookEventName {
+	case EventPreToolUse:
+		return cfg.PreToolUse
+	case EventPostToolUse:
+		return cfg.PostToolUse
+	default:
+		// Unknown event type, fail open
+		return nil
+	}
 }
 
 // matchesRule returns true only when ALL configured matchers pass.

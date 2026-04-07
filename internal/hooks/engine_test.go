@@ -416,3 +416,88 @@ func TestEvaluate_WebFetchEvent_Block(t *testing.T) {
 		t.Fatalf("unexpected message: %q", resp.Context)
 	}
 }
+
+// --- PostToolUse tests ---
+
+func TestEvaluate_PostToolUse_EventRouting(t *testing.T) {
+	cfg := HooksConfig{
+		PostToolUse: []Rule{
+			{
+				Match:  Matchers{Tools: []string{"Write"}},
+				Action: Actions{InjectInline: "post-tool-use context"},
+			},
+		},
+	}
+	resp, _ := Evaluate(postToolUseEvent("Write", "/tmp/file.txt", map[string]any{"success": true}), cfg)
+	if !resp.Continue {
+		t.Fatal("expected Continue=true")
+	}
+	if resp.Context != "post-tool-use context" {
+		t.Fatalf("expected post-tool-use context, got %q", resp.Context)
+	}
+}
+
+func TestEvaluate_PostToolUse_BlockAfterExecution(t *testing.T) {
+	cfg := HooksConfig{
+		PostToolUse: []Rule{
+			{
+				Match:  Matchers{Tools: []string{"Write"}, Extensions: []string{".py"}},
+				Action: Actions{Block: boolPtr(true), Message: "Python file write detected"},
+			},
+		},
+	}
+	resp, _ := Evaluate(postToolUseEvent("Write", "/tmp/test.py", map[string]any{"success": true}), cfg)
+	if resp.Continue {
+		t.Fatal("expected block after Write of .py file")
+	}
+	if resp.Context != "Python file write detected" {
+		t.Fatalf("unexpected message: %q", resp.Context)
+	}
+}
+
+func TestEvaluate_PostToolUse_IgnoresUnrelatedPreToolUse(t *testing.T) {
+	cfg := HooksConfig{
+		PreToolUse: []Rule{
+			{
+				Match:  Matchers{Tools: []string{"Write"}},
+				Action: Actions{InjectInline: "should not appear"},
+			},
+		},
+		PostToolUse: []Rule{
+			{
+				Match:  Matchers{Tools: []string{"Write"}},
+				Action: Actions{InjectInline: "post context"},
+			},
+		},
+	}
+	resp, _ := Evaluate(postToolUseEvent("Write", "/tmp/file.txt", map[string]any{"success": true}), cfg)
+	if resp.Context != "post context" {
+		t.Fatalf("PostToolUse events must not evaluate PreToolUse rules, got %q", resp.Context)
+	}
+}
+
+func TestEvaluate_PostToolUse_Bash_Run(t *testing.T) {
+	tmp := t.TempDir()
+	script := filepath.Join(tmp, "check.sh")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho 'validation passed'"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := HooksConfig{
+		PostToolUse: []Rule{
+			{
+				Match:  Matchers{Tools: []string{"Bash"}},
+				Action: Actions{Run: script},
+			},
+		},
+	}
+	resp, err := Evaluate(postToolUseEvent("Bash", "npm test", map[string]any{"exit_code": 0}), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Continue {
+		t.Fatal("expected Continue=true")
+	}
+	if resp.Context != "validation passed" {
+		t.Fatalf("expected validation output, got %q", resp.Context)
+	}
+}

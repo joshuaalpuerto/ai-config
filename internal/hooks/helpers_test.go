@@ -133,6 +133,62 @@ func newWebFetchEvent(url, prompt string) Event {
 	}
 }
 
+// --- PostToolUse event builders ---
+
+func postToolUseEvent(tool, commandOrPath string, response map[string]any) Event {
+	var input json.RawMessage
+	if tool == "Bash" {
+		input, _ = json.Marshal(map[string]string{"command": commandOrPath})
+	} else {
+		input, _ = json.Marshal(map[string]string{"file_path": commandOrPath})
+	}
+	output, _ := json.Marshal(response)
+	return Event{
+		HookEventName: EventPostToolUse,
+		SessionID:     "test",
+		ToolName:      tool,
+		ToolInput:     input,
+		ToolResponse:  output,
+		ToolUseID:     "toolu_01test",
+	}
+}
+
+func newWriteEventPost(filePath, content string, response map[string]any) Event {
+	input, _ := json.Marshal(map[string]string{
+		"file_path": filePath,
+		"content":   content,
+	})
+	output, _ := json.Marshal(response)
+	return Event{
+		HookEventName: EventPostToolUse,
+		SessionID:     "int-test",
+		ToolName:      "Write",
+		CWD:           "/home/user/my-project",
+		ToolInput:     input,
+		ToolResponse:  output,
+		ToolUseID:     "toolu_01test",
+	}
+}
+
+func newBashEventPost(command, description string, response map[string]any) Event {
+	input, _ := json.Marshal(map[string]any{
+		"command":           command,
+		"description":       description,
+		"timeout":           120000,
+		"run_in_background": false,
+	})
+	output, _ := json.Marshal(response)
+	return Event{
+		HookEventName: EventPostToolUse,
+		SessionID:     "int-test",
+		ToolName:      "Bash",
+		CWD:           "/home/user/my-project",
+		ToolInput:     input,
+		ToolResponse:  output,
+		ToolUseID:     "toolu_01test",
+	}
+}
+
 // --- config loader helpers ---
 
 // writeTempHooksYAML writes content to hooks.yaml inside dir and returns the path.

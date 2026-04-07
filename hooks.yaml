@@ -15,3 +15,12 @@ PreToolUse:
       directories: ["src/api/**", "routes/**"]
     action:
       inject: "context/api-design-guidelines.md"
+
+# Event: After a tool completes successfully
+PostToolUse:
+  # Rule: Run linting checks after file changes
+  - match:
+      tools: ["Write", "Edit"]
+      extensions: [".ts", ".tsx", ".js", ".jsx"]
+    action:
+      run: "./scripts/lint-check.sh"
