@@ -102,3 +102,19 @@ Agent instructions go here.
 ```
 
 Platform-specific behaviour is controlled through `overrides.<platform>.<field>`. Fields listed under `drop_fields` in `aicfg.yaml` are omitted for that platform unless an override is present.
+
+## Hook rule precedence
+
+If you define hook policies in `hooks.yaml`, rule order matters.
+
+- Rules are evaluated from top to bottom for each event list (`PreToolUse`, `PostToolUse`).
+- A matching blocking rule (`action.block: true` in enforce mode) short-circuits evaluation.
+- `action.block: false` does not explicitly allow or short-circuit; it is effectively pass-through.
+
+Practical ordering guidance:
+
+- Put highest-priority and most specific blocking rules first.
+- Put broader or catch-all rules later.
+- If two rules can both block, the first matching one wins.
+
+This avoids surprising behavior when regex patterns overlap, such as a broad `git commit` matcher and a narrower `git commit.*WIP` block rule.
