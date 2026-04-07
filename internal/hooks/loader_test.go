@@ -30,11 +30,11 @@ func TestLoadConfig_ValidFile_Parsed(t *testing.T) {
 	if !failOpen {
 		t.Fatal("expected fail_open=true (default)")
 	}
-	if len(cfg.Rules) != 1 {
-		t.Fatalf("expected 1 rule, got %d", len(cfg.Rules))
+	if len(cfg.PreToolUse) != 1 {
+		t.Fatalf("expected 1 rule, got %d", len(cfg.PreToolUse))
 	}
-	if cfg.Rules[0].Name != "block-force-push" {
-		t.Fatalf("unexpected rule name: %q", cfg.Rules[0].Name)
+	if cfg.PreToolUse[0].Match.Tools[0] != "Bash" {
+		t.Fatalf("unexpected first tool: %q", cfg.PreToolUse[0].Match.Tools[0])
 	}
 }
 
@@ -51,10 +51,9 @@ func TestLoadConfig_CacheHit_NoDiskRead(t *testing.T) {
 
 	// Overwrite file content on disk — cache must return the original.
 	overwritten := minimalHooksYAML + `
-  - name: should-not-appear
-    matchers:
+  - match:
       tools: [Write]
-    actions:
+    action:
       block: true
 `
 	// Keep same mtime to simulate cache hit.
@@ -71,8 +70,8 @@ func TestLoadConfig_CacheHit_NoDiskRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(cfg2.Rules) != len(cfg1.Rules) {
-		t.Fatalf("cache miss: expected %d rules (cached), got %d", len(cfg1.Rules), len(cfg2.Rules))
+	if len(cfg2.PreToolUse) != len(cfg1.PreToolUse) {
+		t.Fatalf("cache miss: expected %d rules (cached), got %d", len(cfg1.PreToolUse), len(cfg2.PreToolUse))
 	}
 }
 
@@ -88,12 +87,11 @@ func TestLoadConfig_CacheMiss_MtimeChanged(t *testing.T) {
 
 	// Update file with a newer mtime — cache must be invalidated.
 	updated := minimalHooksYAML + `
-  - name: new-rule
-    matchers:
+  - match:
       tools: [Write]
-    actions:
+    action:
       block: true
-      block_message: "new"
+      message: "new"
 `
 	// Ensure mtime advances.
 	time.Sleep(10 * time.Millisecond)
@@ -105,8 +103,8 @@ func TestLoadConfig_CacheMiss_MtimeChanged(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(cfg.Rules) != 2 {
-		t.Fatalf("expected 2 rules after cache invalidation, got %d", len(cfg.Rules))
+	if len(cfg.PreToolUse) != 2 {
+		t.Fatalf("expected 2 rules after cache invalidation, got %d", len(cfg.PreToolUse))
 	}
 }
 
@@ -114,8 +112,8 @@ func TestLoadConfig_FailOpen_ExplicitFalse(t *testing.T) {
 	resetCache()
 	tmp := t.TempDir()
 	content := `
-version: "1.0"
-rules: []
+version: "1"
+PreToolUse: []
 settings:
   fail_open: false
 `
@@ -134,8 +132,8 @@ func TestLoadConfig_FailOpen_ExplicitTrue(t *testing.T) {
 	resetCache()
 	tmp := t.TempDir()
 	content := `
-version: "1.0"
-rules: []
+version: "1"
+PreToolUse: []
 settings:
   fail_open: true
 `
@@ -155,7 +153,7 @@ func TestLoadConfig_MalformedYAML_Error(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "hooks.yaml")
 	// A tab used as indentation is rejected by gopkg.in/yaml.v3.
-	content := "version: \"1.0\"\nrules:\n\t- name: bad-tab-indent"
+	content := "version: \"1\"\nPreToolUse:\n\t- bad-tab-indent"
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}

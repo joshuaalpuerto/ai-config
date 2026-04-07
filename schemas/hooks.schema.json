@@ -4,11 +4,11 @@
   "title": "RuleZ Hooks Configuration",
   "description": "Policy rules evaluated by aicfg hooks on every AI action.",
   "type": "object",
-  "required": ["version", "rules"],
+  "required": ["version", "PreToolUse"],
   "additionalProperties": false,
   "properties": {
-    "version": { "type": "string", "const": "1.0" },
-    "rules": {
+    "version": { "type": "string", "const": "1" },
+    "PreToolUse": {
       "type": "array",
       "items": { "$ref": "#/$defs/Rule" }
     },
@@ -26,14 +26,12 @@
     },
     "Rule": {
       "type": "object",
-      "required": ["name", "matchers", "actions"],
+      "required": ["match", "action"],
       "additionalProperties": false,
       "properties": {
-        "name":        { "type": "string", "pattern": "^[a-zA-Z0-9_-]+$" },
-        "description": { "type": "string" },
-        "mode":        { "$ref": "#/$defs/PolicyMode" },
-        "matchers":    { "$ref": "#/$defs/Matchers" },
-        "actions":     { "$ref": "#/$defs/Actions" }
+        "mode":   { "$ref": "#/$defs/PolicyMode" },
+        "match":  { "$ref": "#/$defs/Matchers" },
+        "action": { "$ref": "#/$defs/Actions" }
       }
     },
     "Matchers": {
@@ -51,9 +49,10 @@
       "additionalProperties": false,
       "properties": {
         "block":         { "type": "boolean" },
-        "block_message": { "type": "string" },
+        "message":       { "type": "string", "description": "Human-readable reason shown when a rule blocks." },
         "inject":        { "type": "string", "description": "Path relative to repo root (e.g. context/standards.md)." },
-        "inject_inline": { "type": "string" }
+        "inject_inline": { "type": "string" },
+        "run":           { "type": "string", "description": "Path to a validator script executed with the event JSON on stdin." }
       }
     },
     "Settings": {

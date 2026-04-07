@@ -1,15 +1,17 @@
-- name: python-coding-standards
-  description: "Inject Python coding standards when editing Python files"
-  matchers:
-    tools: ["Edit", "Write"]
-    extensions: [".py", ".pyi"]
-  actions:
-    inject: "context/python-standards.md"
-    
-- name: api-design-guidelines
-  description: "Inject REST API design guidelines for API routes"
-  matchers:
-    tools: ["Edit", "Write"]
-    directories: ["src/api/**", "routes/**"]
-  actions:
-    inject: "context/api-design-guidelines.md"
+version: "1"
+
+# Event: Before a tool is executed
+PreToolUse:
+  # Rule: Inject Python coding standards when editing Python files
+  - match:
+      tools: ["Edit", "Write"]
+      extensions: [".py", ".pyi"]
+    action:
+      inject: "context/python-standards.md"
+
+  # Rule: Inject REST API design guidelines for API routes
+  - match:
+      tools: ["Edit", "Write"]
+      directories: ["src/api/**", "routes/**"]
+    action:
+      inject: "context/api-design-guidelines.md"

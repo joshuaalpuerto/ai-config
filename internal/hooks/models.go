@@ -31,18 +31,16 @@ const (
 
 // HooksConfig is the top-level structure of the deployed hooks.yaml.
 type HooksConfig struct {
-	Version  string    `yaml:"version"`
-	Rules    []Rule    `yaml:"rules"`
-	Settings *Settings `yaml:"settings,omitempty"`
+	Version    string    `yaml:"version"`
+	PreToolUse []Rule    `yaml:"PreToolUse"`
+	Settings   *Settings `yaml:"settings,omitempty"`
 }
 
-// Rule is one policy entry in hooks.yaml.
+// Rule is one policy entry under a PreToolUse event in hooks.yaml.
 type Rule struct {
-	Name        string   `yaml:"name"`
-	Description string   `yaml:"description,omitempty"`
-	Mode        string   `yaml:"mode,omitempty"`
-	Matchers    Matchers `yaml:"matchers"`
-	Actions     Actions  `yaml:"actions"`
+	Mode   string   `yaml:"mode,omitempty"`
+	Match  Matchers `yaml:"match"`
+	Action Actions  `yaml:"action"`
 }
 
 // Matchers describes when a rule applies.
@@ -56,9 +54,10 @@ type Matchers struct {
 // Actions describes what happens when a rule fires.
 type Actions struct {
 	Block        *bool  `yaml:"block,omitempty"`
-	BlockMessage string `yaml:"block_message,omitempty"`
+	Message      string `yaml:"message,omitempty"`
 	Inject       string `yaml:"inject,omitempty"`
 	InjectInline string `yaml:"inject_inline,omitempty"`
+	Run          string `yaml:"run,omitempty"`
 }
 
 // Settings holds global engine options.

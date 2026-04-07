@@ -10,8 +10,8 @@ import (
 
 func TestMatchesRule_ToolFilter_Match(t *testing.T) {
 	rule := Rule{
-		Matchers: Matchers{Tools: []string{"Bash"}},
-		Actions:  Actions{Block: boolPtr(true)},
+		Match:  Matchers{Tools: []string{"Bash"}},
+		Action: Actions{Block: boolPtr(true)},
 	}
 	if !matchesRule(bashEvent("echo hi"), rule) {
 		t.Fatal("expected rule to match Bash event")
@@ -20,8 +20,8 @@ func TestMatchesRule_ToolFilter_Match(t *testing.T) {
 
 func TestMatchesRule_ToolFilter_NoMatch(t *testing.T) {
 	rule := Rule{
-		Matchers: Matchers{Tools: []string{"Write"}},
-		Actions:  Actions{Block: boolPtr(true)},
+		Match:  Matchers{Tools: []string{"Write"}},
+		Action: Actions{Block: boolPtr(true)},
 	}
 	if matchesRule(bashEvent("echo hi"), rule) {
 		t.Fatal("expected rule NOT to match Bash when tools=[Write]")
@@ -30,8 +30,8 @@ func TestMatchesRule_ToolFilter_NoMatch(t *testing.T) {
 
 func TestMatchesRule_ToolFilter_CaseInsensitive(t *testing.T) {
 	rule := Rule{
-		Matchers: Matchers{Tools: []string{"bash"}},
-		Actions:  Actions{Block: boolPtr(true)},
+		Match:  Matchers{Tools: []string{"bash"}},
+		Action: Actions{Block: boolPtr(true)},
 	}
 	if !matchesRule(bashEvent("echo hi"), rule) {
 		t.Fatal("expected case-insensitive tool match")
@@ -40,11 +40,11 @@ func TestMatchesRule_ToolFilter_CaseInsensitive(t *testing.T) {
 
 func TestMatchesRule_CommandMatch_Hit(t *testing.T) {
 	rule := Rule{
-		Matchers: Matchers{
+		Match: Matchers{
 			Tools:        []string{"Bash"},
 			CommandMatch: `git push.*--force`,
 		},
-		Actions: Actions{Block: boolPtr(true)},
+		Action: Actions{Block: boolPtr(true)},
 	}
 	if !matchesRule(bashEvent("git push --force origin main"), rule) {
 		t.Fatal("expected command regex to match")
@@ -53,11 +53,11 @@ func TestMatchesRule_CommandMatch_Hit(t *testing.T) {
 
 func TestMatchesRule_CommandMatch_Miss(t *testing.T) {
 	rule := Rule{
-		Matchers: Matchers{
+		Match: Matchers{
 			Tools:        []string{"Bash"},
 			CommandMatch: `git push.*--force`,
 		},
-		Actions: Actions{Block: boolPtr(true)},
+		Action: Actions{Block: boolPtr(true)},
 	}
 	if matchesRule(bashEvent("git status"), rule) {
 		t.Fatal("expected command regex NOT to match git status")
@@ -66,11 +66,11 @@ func TestMatchesRule_CommandMatch_Miss(t *testing.T) {
 
 func TestMatchesRule_ExtensionFilter_Match(t *testing.T) {
 	rule := Rule{
-		Matchers: Matchers{
+		Match: Matchers{
 			Tools:      []string{"Write"},
 			Extensions: []string{".py"},
 		},
-		Actions: Actions{InjectInline: "python standards"},
+		Action: Actions{InjectInline: "python standards"},
 	}
 	if !matchesRule(fileEvent("Write", "/home/user/project/routes.py"), rule) {
 		t.Fatal("expected .py extension to match")
@@ -79,11 +79,11 @@ func TestMatchesRule_ExtensionFilter_Match(t *testing.T) {
 
 func TestMatchesRule_ExtensionFilter_Miss(t *testing.T) {
 	rule := Rule{
-		Matchers: Matchers{
+		Match: Matchers{
 			Tools:      []string{"Write"},
 			Extensions: []string{".py"},
 		},
-		Actions: Actions{InjectInline: "python standards"},
+		Action: Actions{InjectInline: "python standards"},
 	}
 	if matchesRule(fileEvent("Write", "/home/user/project/routes.ts"), rule) {
 		t.Fatal("expected .ts extension NOT to match .py filter")
@@ -92,11 +92,11 @@ func TestMatchesRule_ExtensionFilter_Miss(t *testing.T) {
 
 func TestMatchesRule_ExtensionFilter_CaseInsensitive(t *testing.T) {
 	rule := Rule{
-		Matchers: Matchers{
+		Match: Matchers{
 			Tools:      []string{"Edit"},
 			Extensions: []string{".PY"},
 		},
-		Actions: Actions{InjectInline: "python standards"},
+		Action: Actions{InjectInline: "python standards"},
 	}
 	if !matchesRule(fileEvent("Edit", "/home/user/project/routes.py"), rule) {
 		t.Fatal("expected case-insensitive extension match")
@@ -105,11 +105,11 @@ func TestMatchesRule_ExtensionFilter_CaseInsensitive(t *testing.T) {
 
 func TestMatchesRule_DirectoryFilter_PrefixMatch(t *testing.T) {
 	rule := Rule{
-		Matchers: Matchers{
+		Match: Matchers{
 			Tools:       []string{"Edit"},
 			Directories: []string{"/home/user/project/src"},
 		},
-		Actions: Actions{InjectInline: "src standards"},
+		Action: Actions{InjectInline: "src standards"},
 	}
 	if !matchesRule(fileEvent("Edit", "/home/user/project/src/api/routes.py"), rule) {
 		t.Fatal("expected directory prefix to match")
@@ -118,11 +118,11 @@ func TestMatchesRule_DirectoryFilter_PrefixMatch(t *testing.T) {
 
 func TestMatchesRule_DirectoryFilter_Miss(t *testing.T) {
 	rule := Rule{
-		Matchers: Matchers{
+		Match: Matchers{
 			Tools:       []string{"Edit"},
 			Directories: []string{"/home/user/project/src"},
 		},
-		Actions: Actions{InjectInline: "src standards"},
+		Action: Actions{InjectInline: "src standards"},
 	}
 	if matchesRule(fileEvent("Edit", "/home/user/project/tests/test_routes.py"), rule) {
 		t.Fatal("expected directory filter NOT to match /tests/")
@@ -131,8 +131,8 @@ func TestMatchesRule_DirectoryFilter_Miss(t *testing.T) {
 
 func TestMatchesRule_NoMatchers_AlwaysMatches(t *testing.T) {
 	rule := Rule{
-		Matchers: Matchers{},
-		Actions:  Actions{InjectInline: "global context"},
+		Match:  Matchers{},
+		Action: Actions{InjectInline: "global context"},
 	}
 	if !matchesRule(bashEvent("anything"), rule) {
 		t.Fatal("expected rule with no matchers to always match")
@@ -141,8 +141,8 @@ func TestMatchesRule_NoMatchers_AlwaysMatches(t *testing.T) {
 
 func TestMatchesRule_WebFetch_ToolFilter(t *testing.T) {
 	rule := Rule{
-		Matchers: Matchers{Tools: []string{"WebFetch"}},
-		Actions:  Actions{Block: boolPtr(true), BlockMessage: "no external fetch"},
+		Match:  Matchers{Tools: []string{"WebFetch"}},
+		Action: Actions{Block: boolPtr(true), Message: "no external fetch"},
 	}
 	if !matchesRule(webFetchEvent("https://example.com"), rule) {
 		t.Fatal("expected WebFetch tool to match")
@@ -151,11 +151,11 @@ func TestMatchesRule_WebFetch_ToolFilter(t *testing.T) {
 
 func TestMatchesRule_Read_ToolAndExtension(t *testing.T) {
 	rule := Rule{
-		Matchers: Matchers{
+		Match: Matchers{
 			Tools:      []string{"Read"},
 			Extensions: []string{".env"},
 		},
-		Actions: Actions{Block: boolPtr(true)},
+		Action: Actions{Block: boolPtr(true)},
 	}
 	if !matchesRule(fileEvent("Read", "/home/user/project/.env"), rule) {
 		t.Fatal("expected Read + .env to match")
@@ -166,8 +166,7 @@ func TestMatchesRule_Read_ToolAndExtension(t *testing.T) {
 
 func TestExecuteActions_Block_Enforce(t *testing.T) {
 	rule := Rule{
-		Name:    "block-rule",
-		Actions: Actions{Block: boolPtr(true), BlockMessage: "not allowed"},
+		Action: Actions{Block: boolPtr(true), Message: "not allowed"},
 	}
 	resp, err := executeActions(bashEvent("cmd"), rule, ModeEnforce)
 	if err != nil {
@@ -183,22 +182,20 @@ func TestExecuteActions_Block_Enforce(t *testing.T) {
 
 func TestExecuteActions_Block_DefaultMessage(t *testing.T) {
 	rule := Rule{
-		Name:    "my-rule",
-		Actions: Actions{Block: boolPtr(true)},
+		Action: Actions{Block: boolPtr(true)},
 	}
 	resp, _ := executeActions(bashEvent("cmd"), rule, ModeEnforce)
 	if resp.Continue {
 		t.Fatal("expected Continue=false")
 	}
-	if resp.Context != "Blocked by rule: my-rule" {
+	if resp.Context != "Blocked by hook rule." {
 		t.Fatalf("unexpected default message: %q", resp.Context)
 	}
 }
 
 func TestExecuteActions_Block_WarnMode(t *testing.T) {
 	rule := Rule{
-		Name:    "warn-rule",
-		Actions: Actions{Block: boolPtr(true), BlockMessage: "risky"},
+		Action: Actions{Block: boolPtr(true), Message: "risky"},
 	}
 	resp, _ := executeActions(bashEvent("cmd"), rule, ModeWarn)
 	if !resp.Continue {
@@ -214,7 +211,7 @@ func TestExecuteActions_Block_WarnMode(t *testing.T) {
 
 func TestExecuteActions_InjectInline(t *testing.T) {
 	rule := Rule{
-		Actions: Actions{InjectInline: "inline context text"},
+		Action: Actions{InjectInline: "inline context text"},
 	}
 	resp, _ := executeActions(bashEvent("cmd"), rule, ModeEnforce)
 	if !resp.Continue {
@@ -231,7 +228,7 @@ func TestExecuteActions_InjectFile_Readable(t *testing.T) {
 	if err := os.WriteFile(f, []byte("# Standards\nFollow these."), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	rule := Rule{Actions: Actions{Inject: f}}
+	rule := Rule{Action: Actions{Inject: f}}
 	resp, _ := executeActions(bashEvent("cmd"), rule, ModeEnforce)
 	if !resp.Continue {
 		t.Fatal("expected Continue=true")
@@ -242,7 +239,7 @@ func TestExecuteActions_InjectFile_Readable(t *testing.T) {
 }
 
 func TestExecuteActions_InjectFile_MissingIsFailOpen(t *testing.T) {
-	rule := Rule{Actions: Actions{Inject: "/nonexistent/path/standards.md"}}
+	rule := Rule{Action: Actions{Inject: "/nonexistent/path/standards.md"}}
 	resp, err := executeActions(bashEvent("cmd"), rule, ModeEnforce)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -253,7 +250,7 @@ func TestExecuteActions_InjectFile_MissingIsFailOpen(t *testing.T) {
 }
 
 func TestExecuteActions_NoAction_PassThrough(t *testing.T) {
-	rule := Rule{Actions: Actions{}}
+	rule := Rule{Action: Actions{}}
 	resp, _ := executeActions(bashEvent("cmd"), rule, ModeEnforce)
 	if !resp.Continue {
 		t.Fatal("expected Continue=true with no actions")
@@ -267,16 +264,14 @@ func TestExecuteActions_NoAction_PassThrough(t *testing.T) {
 
 func TestEvaluate_BlockShortCircuits(t *testing.T) {
 	cfg := HooksConfig{
-		Rules: []Rule{
+		PreToolUse: []Rule{
 			{
-				Name:     "block-rule",
-				Matchers: Matchers{Tools: []string{"Bash"}},
-				Actions:  Actions{Block: boolPtr(true), BlockMessage: "blocked"},
+				Match:  Matchers{Tools: []string{"Bash"}},
+				Action: Actions{Block: boolPtr(true), Message: "blocked"},
 			},
 			{
-				Name:     "inject-rule",
-				Matchers: Matchers{Tools: []string{"Bash"}},
-				Actions:  Actions{InjectInline: "should not appear"},
+				Match:  Matchers{Tools: []string{"Bash"}},
+				Action: Actions{InjectInline: "should not appear"},
 			},
 		},
 	}
@@ -294,16 +289,14 @@ func TestEvaluate_BlockShortCircuits(t *testing.T) {
 
 func TestEvaluate_MultiRuleInjectAccumulates(t *testing.T) {
 	cfg := HooksConfig{
-		Rules: []Rule{
+		PreToolUse: []Rule{
 			{
-				Name:     "rule-a",
-				Matchers: Matchers{Tools: []string{"Bash"}},
-				Actions:  Actions{InjectInline: "context A"},
+				Match:  Matchers{Tools: []string{"Bash"}},
+				Action: Actions{InjectInline: "context A"},
 			},
 			{
-				Name:     "rule-b",
-				Matchers: Matchers{Tools: []string{"Bash"}},
-				Actions:  Actions{InjectInline: "context B"},
+				Match:  Matchers{Tools: []string{"Bash"}},
+				Action: Actions{InjectInline: "context B"},
 			},
 		},
 	}
@@ -319,12 +312,11 @@ func TestEvaluate_MultiRuleInjectAccumulates(t *testing.T) {
 
 func TestEvaluate_AuditMode_Skipped(t *testing.T) {
 	cfg := HooksConfig{
-		Rules: []Rule{
+		PreToolUse: []Rule{
 			{
-				Name:     "audit-rule",
-				Mode:     string(ModeAudit),
-				Matchers: Matchers{Tools: []string{"Bash"}},
-				Actions:  Actions{Block: boolPtr(true)},
+				Mode:   string(ModeAudit),
+				Match:  Matchers{Tools: []string{"Bash"}},
+				Action: Actions{Block: boolPtr(true)},
 			},
 		},
 	}
@@ -336,11 +328,10 @@ func TestEvaluate_AuditMode_Skipped(t *testing.T) {
 
 func TestEvaluate_NoMatchingRule_Allow(t *testing.T) {
 	cfg := HooksConfig{
-		Rules: []Rule{
+		PreToolUse: []Rule{
 			{
-				Name:     "write-only",
-				Matchers: Matchers{Tools: []string{"Write"}},
-				Actions:  Actions{Block: boolPtr(true)},
+				Match:  Matchers{Tools: []string{"Write"}},
+				Action: Actions{Block: boolPtr(true)},
 			},
 		},
 	}
@@ -362,11 +353,10 @@ func TestEvaluate_EmptyRules_Allow(t *testing.T) {
 
 func TestEvaluate_WriteEvent_ExtensionBlock(t *testing.T) {
 	cfg := HooksConfig{
-		Rules: []Rule{
+		PreToolUse: []Rule{
 			{
-				Name:     "block-env-writes",
-				Matchers: Matchers{Tools: []string{"Write"}, Extensions: []string{".env"}},
-				Actions:  Actions{Block: boolPtr(true), BlockMessage: "cannot write .env files"},
+				Match:  Matchers{Tools: []string{"Write"}, Extensions: []string{".env"}},
+				Action: Actions{Block: boolPtr(true), Message: "cannot write .env files"},
 			},
 		},
 	}
@@ -378,11 +368,10 @@ func TestEvaluate_WriteEvent_ExtensionBlock(t *testing.T) {
 
 func TestEvaluate_EditEvent_InjectInline(t *testing.T) {
 	cfg := HooksConfig{
-		Rules: []Rule{
+		PreToolUse: []Rule{
 			{
-				Name:     "py-standards",
-				Matchers: Matchers{Tools: []string{"Edit"}, Extensions: []string{".py"}},
-				Actions:  Actions{InjectInline: "follow PEP8"},
+				Match:  Matchers{Tools: []string{"Edit"}, Extensions: []string{".py"}},
+				Action: Actions{InjectInline: "follow PEP8"},
 			},
 		},
 	}
@@ -397,11 +386,10 @@ func TestEvaluate_EditEvent_InjectInline(t *testing.T) {
 
 func TestEvaluate_ReadEvent_NoMatch(t *testing.T) {
 	cfg := HooksConfig{
-		Rules: []Rule{
+		PreToolUse: []Rule{
 			{
-				Name:     "write-only-rule",
-				Matchers: Matchers{Tools: []string{"Write"}},
-				Actions:  Actions{Block: boolPtr(true)},
+				Match:  Matchers{Tools: []string{"Write"}},
+				Action: Actions{Block: boolPtr(true)},
 			},
 		},
 	}
@@ -413,11 +401,10 @@ func TestEvaluate_ReadEvent_NoMatch(t *testing.T) {
 
 func TestEvaluate_WebFetchEvent_Block(t *testing.T) {
 	cfg := HooksConfig{
-		Rules: []Rule{
+		PreToolUse: []Rule{
 			{
-				Name:     "no-external-fetch",
-				Matchers: Matchers{Tools: []string{"WebFetch"}},
-				Actions:  Actions{Block: boolPtr(true), BlockMessage: "external fetch blocked"},
+				Match:  Matchers{Tools: []string{"WebFetch"}},
+				Action: Actions{Block: boolPtr(true), Message: "external fetch blocked"},
 			},
 		},
 	}

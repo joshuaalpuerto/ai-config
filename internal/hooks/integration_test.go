@@ -14,15 +14,14 @@ import (
 
 func TestIntegration_Bash_BlockForcePush(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: block-force-push
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [Bash]
       command_match: "git push.*--force"
-    actions:
+    action:
       block: true
-      block_message: "Force-pushing is not allowed."
+      message: "Force-pushing is not allowed."
 `)
 	resp, err := Evaluate(newBashEvent("git push --force origin main", "Force push"), cfg)
 	if err != nil {
@@ -38,15 +37,14 @@ rules:
 
 func TestIntegration_Bash_AllowSafeCommand(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: block-force-push
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [Bash]
       command_match: "git push.*--force"
-    actions:
+    action:
       block: true
-      block_message: "Force-pushing is not allowed."
+      message: "Force-pushing is not allowed."
 `)
 	resp, err := Evaluate(newBashEvent("npm test", "Run test suite"), cfg)
 	if err != nil {
@@ -59,15 +57,14 @@ rules:
 
 func TestIntegration_Bash_BlockDestructiveCommand(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: block-rm-rf
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [Bash]
       command_match: "rm -rf /"
-    actions:
+    action:
       block: true
-      block_message: "Deleting the root filesystem is not allowed."
+      message: "Deleting the root filesystem is not allowed."
 `)
 	resp, _ := Evaluate(newBashEvent("rm -rf /", "Delete everything"), cfg)
 	if resp.Continue {
@@ -77,16 +74,15 @@ rules:
 
 func TestIntegration_Bash_WarnMode_ExitsOpen(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: warn-git-push
-    mode: warn
-    matchers:
+version: "1"
+PreToolUse:
+  - mode: warn
+    match:
       tools: [Bash]
       command_match: "git push"
-    actions:
+    action:
       block: true
-      block_message: "Pushing without review."
+      message: "Pushing without review."
 `)
 	resp, _ := Evaluate(newBashEvent("git push origin main", "Push branch"), cfg)
 	if !resp.Continue {
@@ -99,13 +95,12 @@ rules:
 
 func TestIntegration_Bash_AuditMode_NoEffect(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: audit-all-bash
-    mode: audit
-    matchers:
+version: "1"
+PreToolUse:
+  - mode: audit
+    match:
       tools: [Bash]
-    actions:
+    action:
       block: true
 `)
 	resp, _ := Evaluate(newBashEvent("anything", ""), cfg)
@@ -122,15 +117,14 @@ rules:
 
 func TestIntegration_Write_BlockEnvFile(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: block-env-writes
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [Write]
       extensions: [.env]
-    actions:
+    action:
       block: true
-      block_message: "Writing .env files is not allowed."
+      message: "Writing .env files is not allowed."
 `)
 	resp, _ := Evaluate(newWriteEvent("/home/user/my-project/.env", "SECRET=abc"), cfg)
 	if resp.Continue {
@@ -147,13 +141,12 @@ func TestIntegration_Write_InjectPythonStandards(t *testing.T) {
 
 	resetCache()
 	hooksPath := filepath.Join(tmp, "hooks.yaml")
-	yaml := `version: "1.0"
-rules:
-  - name: inject-python-standards
-    matchers:
+	yaml := `version: "1"
+PreToolUse:
+  - match:
       tools: [Write]
       extensions: [.py]
-    actions:
+    action:
       inject: ` + contextFile + `
 `
 	if err := os.WriteFile(hooksPath, []byte(yaml), 0o644); err != nil {
@@ -175,13 +168,12 @@ rules:
 
 func TestIntegration_Write_AllowNonRestrictedFile(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: block-env-writes
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [Write]
       extensions: [.env]
-    actions:
+    action:
       block: true
 `)
 	resp, _ := Evaluate(newWriteEvent("/home/user/my-project/src/main.go", "package main"), cfg)
@@ -195,13 +187,12 @@ rules:
 
 func TestIntegration_Edit_InjectInlineForPython(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: py-edit-standards
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [Edit]
       extensions: [.py]
-    actions:
+    action:
       inject_inline: "Reminder: follow PEP8 and add type hints."
 `)
 	resp, _ := Evaluate(
@@ -218,15 +209,14 @@ rules:
 
 func TestIntegration_Edit_BlockRestrictedDirectory(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: block-infra-edits
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [Edit]
       directories: [/home/user/my-project/infra]
-    actions:
+    action:
       block: true
-      block_message: "Direct edits to infra/ are not allowed."
+      message: "Direct edits to infra/ are not allowed."
 `)
 	resp, _ := Evaluate(
 		newEditEvent("/home/user/my-project/infra/main.tf", "old", "new"),
@@ -239,13 +229,12 @@ rules:
 
 func TestIntegration_Edit_AllowUnrestrictedFile(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: block-infra-edits
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [Edit]
       directories: [/home/user/my-project/infra]
-    actions:
+    action:
       block: true
 `)
 	resp, _ := Evaluate(
@@ -262,15 +251,14 @@ rules:
 
 func TestIntegration_Read_BlockEnvFile(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: block-env-reads
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [Read]
       extensions: [.env]
-    actions:
+    action:
       block: true
-      block_message: "Reading .env files is not allowed."
+      message: "Reading .env files is not allowed."
 `)
 	resp, _ := Evaluate(newReadEvent("/home/user/my-project/.env"), cfg)
 	if resp.Continue {
@@ -280,13 +268,12 @@ rules:
 
 func TestIntegration_Read_AllowNormalFile(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: block-env-reads
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [Read]
       extensions: [.env]
-    actions:
+    action:
       block: true
 `)
 	resp, _ := Evaluate(newReadEvent("/home/user/my-project/README.md"), cfg)
@@ -297,13 +284,12 @@ rules:
 
 func TestIntegration_Read_InjectContextForKeyFiles(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: annotate-go-reads
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [Read]
       extensions: [.go]
-    actions:
+    action:
       inject_inline: "Note: follow the project Go style guide."
 `)
 	resp, _ := Evaluate(newReadEvent("/home/user/my-project/internal/handler.go"), cfg)
@@ -320,14 +306,13 @@ rules:
 
 func TestIntegration_WebFetch_BlockAllExternalFetches(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: no-external-fetch
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [WebFetch]
-    actions:
+    action:
       block: true
-      block_message: "External web fetches are not permitted."
+      message: "External web fetches are not permitted."
 `)
 	resp, _ := Evaluate(newWebFetchEvent("https://external.example.com/api", "Extract API endpoints"), cfg)
 	if resp.Continue {
@@ -340,15 +325,14 @@ rules:
 
 func TestIntegration_WebFetch_WarnMode_AllowsWithContext(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: warn-external-fetch
-    mode: warn
-    matchers:
+version: "1"
+PreToolUse:
+  - mode: warn
+    match:
       tools: [WebFetch]
-    actions:
+    action:
       block: true
-      block_message: "External fetch detected."
+      message: "External fetch detected."
 `)
 	resp, _ := Evaluate(newWebFetchEvent("https://external.example.com/api", "Get data"), cfg)
 	if !resp.Continue {
@@ -363,26 +347,23 @@ rules:
 
 func TestIntegration_MultipleRules_OnlyMatchingApply(t *testing.T) {
 	cfg := intCfg(t, `
-version: "1.0"
-rules:
-  - name: block-bash-force-push
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [Bash]
       command_match: "git push.*--force"
-    actions:
+    action:
       block: true
-      block_message: "Force push blocked."
-  - name: inject-python-hint
-    matchers:
+      message: "Force push blocked."
+  - match:
       tools: [Write, Edit]
       extensions: [.py]
-    actions:
+    action:
       inject_inline: "Python hint applied."
-  - name: block-env-reads
-    matchers:
+  - match:
       tools: [Read]
       extensions: [.env]
-    actions:
+    action:
       block: true
 `)
 	tests := []struct {

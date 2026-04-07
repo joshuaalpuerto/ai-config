@@ -1,9 +1,11 @@
 package hooks
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -16,7 +18,7 @@ import (
 func Evaluate(event Event, cfg HooksConfig) (Response, error) {
 	var accumulated string
 
-	for _, rule := range cfg.Rules {
+	for _, rule := range cfg.PreToolUse {
 		if !matchesRule(event, rule) {
 			continue
 		}
@@ -53,7 +55,7 @@ func Evaluate(event Event, cfg HooksConfig) (Response, error) {
 // matchesRule returns true only when ALL configured matchers pass.
 // An unconfigured matcher always passes (opt-in narrowing).
 func matchesRule(event Event, rule Rule) bool {
-	m := rule.Matchers
+	m := rule.Match
 
 	if len(m.Tools) > 0 && !toolMatches(event.ToolName, m.Tools) {
 		return false
@@ -88,15 +90,15 @@ func matchesRule(event Event, rule Rule) bool {
 }
 
 func executeActions(event Event, rule Rule, mode PolicyMode) (Response, error) {
-	a := rule.Actions
+	a := rule.Action
 
 	if a.Block != nil && *a.Block {
-		reason := a.BlockMessage
+		reason := a.Message
 		if reason == "" {
-			reason = fmt.Sprintf("Blocked by rule: %s", rule.Name)
+			reason = "Blocked by hook rule."
 		}
 		if mode == ModeWarn {
-			return Response{Continue: true, Context: fmt.Sprintf("[WARNING] Rule %q would block this action: %s", rule.Name, reason)}, nil
+			return Response{Continue: true, Context: fmt.Sprintf("[WARNING] A hook rule would block this action: %s", reason)}, nil
 		}
 		return Response{Continue: false, Context: reason}, nil
 	}
@@ -115,7 +117,39 @@ func executeActions(event Event, rule Rule, mode PolicyMode) (Response, error) {
 		return Response{Continue: true, Context: string(data)}, nil
 	}
 
+	if a.Run != "" {
+		return executeRun(event, a.Run, mode)
+	}
+
 	return Response{Continue: true}, nil
+}
+
+// executeRun invokes a validator script with the event JSON on stdin.
+// Exit 0: stdout is injected as context. Non-zero exit: blocks (or warns).
+func executeRun(event Event, scriptPath string, mode PolicyMode) (Response, error) {
+	eventJSON, err := json.Marshal(event)
+	if err != nil {
+		return Response{Continue: true}, fmt.Errorf("marshalling event for run: %w", err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command(scriptPath) // #nosec G204 — path comes from operator-controlled hooks.yaml
+	cmd.Stdin = bytes.NewReader(eventJSON)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if runErr := cmd.Run(); runErr != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg == "" {
+			msg = fmt.Sprintf("Validator %q failed.", scriptPath)
+		}
+		if mode == ModeWarn {
+			return Response{Continue: true, Context: fmt.Sprintf("[WARNING] %s", msg)}, nil
+		}
+		return Response{Continue: false, Context: msg}, nil
+	}
+
+	return Response{Continue: true, Context: strings.TrimSpace(stdout.String())}, nil
 }
 
 func toolMatches(toolName string, tools []string) bool {

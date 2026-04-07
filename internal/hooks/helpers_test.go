@@ -14,15 +14,14 @@ func boolPtr(b bool) *bool { return &b }
 // --- minimal config fixture ---
 
 const minimalHooksYAML = `
-version: "1.0"
-rules:
-  - name: block-force-push
-    matchers:
+version: "1"
+PreToolUse:
+  - match:
       tools: [Bash]
       command_match: "git push.*--force"
-    actions:
+    action:
       block: true
-      block_message: "Force-pushing is not allowed."
+      message: "Force-pushing is not allowed."
 `
 
 // --- event builders (unit-test style, no description/extra fields) ---

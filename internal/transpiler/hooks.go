@@ -47,9 +47,9 @@ func TranspileHooks(
 	platformToolMap := toolMap[platform]
 	contextDirAbs := filepath.Join(targetRoot, hooksCfg.ContextDir)
 
-	for i := range src.Rules {
-		src.Rules[i].Matchers.Tools = translateTools(src.Rules[i].Matchers.Tools, platformToolMap)
-		src.Rules[i].Actions.Inject = translateInjectPath(src.Rules[i].Actions.Inject, contextDirAbs)
+	for i := range src.PreToolUse {
+		src.PreToolUse[i].Match.Tools = translateTools(src.PreToolUse[i].Match.Tools, platformToolMap)
+		src.PreToolUse[i].Action.Inject = translateInjectPath(src.PreToolUse[i].Action.Inject, contextDirAbs)
 	}
 
 	out, err := yaml.Marshal(&src)
