@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/joshuacalpuerto/ai-config/internal/config"
-	"github.com/joshuacalpuerto/ai-config/internal/frontmatter"
+	"github.com/joshuaalpuerto/ai-config/internal/config"
+	"github.com/joshuaalpuerto/ai-config/internal/frontmatter"
 )
 
 // TranspileFile processes a single source file for a single platform+type combo.

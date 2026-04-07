@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/joshuacalpuerto/ai-config/internal/config"
-	"github.com/joshuacalpuerto/ai-config/internal/hooks"
-	"github.com/joshuacalpuerto/ai-config/schemas"
+	"github.com/joshuaalpuerto/ai-config/internal/config"
+	"github.com/joshuaalpuerto/ai-config/internal/hooks"
+	"github.com/joshuaalpuerto/ai-config/schemas"
 	"gopkg.in/yaml.v3"
 )
 

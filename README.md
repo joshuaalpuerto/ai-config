@@ -7,7 +7,7 @@ A transpiler for AI assistant configurations. Write agent definitions, rules, co
 Install the `aicfg` binary globally with Go (no cloning required):
 
 ```bash
-go install github.com/joshuacalpuerto/ai-config/cmd/aicfg@latest
+go install github.com/joshuaalpuerto/ai-config/cmd/aicfg@latest
 ```
 
 This installs `aicfg` to `~/go/bin`, making it available as a command anywhere on your machine. Ensure `~/go/bin` is on your `$PATH`:
@@ -20,7 +20,7 @@ export PATH="$HOME/go/bin:$PATH"
 To run without installing:
 
 ```bash
-go run github.com/joshuacalpuerto/ai-config/cmd/aicfg@latest build
+go run github.com/joshuaalpuerto/ai-config/cmd/aicfg@latest build
 ```
 
 ### Using in your project

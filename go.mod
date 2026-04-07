@@ -1,4 +1,4 @@
-module github.com/joshuacalpuerto/ai-config
+module github.com/joshuaalpuerto/ai-config
 
 go 1.24.5
 

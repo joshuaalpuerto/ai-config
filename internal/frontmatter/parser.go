@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joshuacalpuerto/ai-config/schemas"
+	"github.com/joshuaalpuerto/ai-config/schemas"
 	"gopkg.in/yaml.v3"
 )
 

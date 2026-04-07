@@ -8,9 +8,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/joshuacalpuerto/ai-config/internal/config"
-	"github.com/joshuacalpuerto/ai-config/internal/frontmatter"
-	"github.com/joshuacalpuerto/ai-config/schemas"
+	"github.com/joshuaalpuerto/ai-config/internal/config"
+	"github.com/joshuaalpuerto/ai-config/internal/frontmatter"
+	"github.com/joshuaalpuerto/ai-config/schemas"
 )
 
 // Result holds the error and warning counts from a validation run.

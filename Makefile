@@ -3,16 +3,16 @@ SHELL := /bin/bash
 .PHONY: build clean validate watch install
 
 install:
-	@go install ./cmd/...
+	@go install ./cmd/aicfg
 
 build:
-	@go run ./cmd build
+	@go run ./cmd/aicfg build
 
 clean:
-	@go run ./cmd clean
+	@go run ./cmd/aicfg clean
 
 validate:
-	@go run ./cmd validate
+	@go run ./cmd/aicfg validate
 
 watch:
 	@echo "Watching src/ for changes..."

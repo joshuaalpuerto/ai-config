@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joshuacalpuerto/ai-config/schemas"
+	"github.com/joshuaalpuerto/ai-config/schemas"
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/santhosh-tekuri/jsonschema/v6/kind"
 	"golang.org/x/text/language"
@@ -52,7 +52,7 @@ func LoadConfig(path string) (AicfgConfig, error) {
 }
 
 // docsURL is the reference for valid aicfg.yaml fields, included in config error messages.
-const docsURL = "https://github.com/joshuacalpuerto/ai-config#project-structure"
+const docsURL = "https://github.com/joshuaalpuerto/ai-config#project-structure"
 
 // formatConfigError rewrites jsonschema validation errors into user-readable messages.
 func formatConfigError(err error, filePath string) error {

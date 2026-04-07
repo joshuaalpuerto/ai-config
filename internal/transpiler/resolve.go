@@ -4,8 +4,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/joshuacalpuerto/ai-config/internal/config"
-	"github.com/joshuacalpuerto/ai-config/internal/frontmatter"
+	"github.com/joshuaalpuerto/ai-config/internal/config"
+	"github.com/joshuaalpuerto/ai-config/internal/frontmatter"
 )
 
 // ResolveField returns the value of a named scalar field for a platform,

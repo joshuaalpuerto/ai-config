@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/joshuacalpuerto/ai-config/internal/config"
+	"github.com/joshuaalpuerto/ai-config/internal/config"
 )
 
 // CleanAll removes all generated output directories and prints removed paths to w.
