@@ -22,7 +22,8 @@ func MergeClaudeSettings(claudeDir, platform string) error {
 	}
 
 	hooksMap := resolveHooksMap(existing)
-	hooksMap["PreToolUse"] = buildPreToolUseEntry(platform)
+	hooksMap["PreToolUse"] = buildHookEntry(platform)
+	hooksMap["PostToolUse"] = buildHookEntry(platform)
 	existing["hooks"] = hooksMap
 
 	out, err := json.MarshalIndent(existing, "", "  ")
@@ -48,7 +49,7 @@ func resolveHooksMap(root map[string]any) map[string]any {
 	return map[string]any{}
 }
 
-func buildPreToolUseEntry(platform string) []any {
+func buildHookEntry(platform string) []any {
 	return []any{
 		map[string]any{
 			"hooks": []any{

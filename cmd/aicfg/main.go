@@ -102,7 +102,7 @@ func buildCmd(opts *rootOpts) *cobra.Command {
 				if err := settings.MergeClaudeSettings(claudeDir, opts.platform); err != nil {
 					return fmt.Errorf("updating .claude/settings.json: %w", err)
 				}
-				fmt.Println("  settings.json: PreToolUse hook registered")
+				fmt.Println("  settings.json: PreToolUse and PostToolUse hooks registered")
 			}
 			fmt.Println()
 			fmt.Println("Done.")
