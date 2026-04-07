@@ -24,6 +24,7 @@ platforms:
     hooks:
       src_hooks_file: hooks.yaml
       hooks_file: .claude/hooks.yaml
+      src_context_dir: src/context
       context_dir: .claude/context
 
   # GitHub Copilot

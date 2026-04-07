@@ -100,15 +100,17 @@ func translateInjectPath(injectPath, contextDirAbs string) string {
 	return filepath.Join(contextDirAbs, filepath.Base(injectPath))
 }
 
-// CopyContextDir copies all files from rootDir/context/ to the platform's context_dir.
-// Silently skips when context/ is absent (it is optional).
+// CopyContextDir copies all files from the source context directory to the platform's context_dir.
+// The source directory is hooksCfg.SrcContextDir
+// Silently skips when the source directory is absent (it is optional).
 func CopyContextDir(
 	rootDir string,
 	hooksCfg config.HooksConfig,
 	targetRoot string,
 	w io.Writer,
 ) error {
-	srcDir := filepath.Join(rootDir, "context")
+	srcContextDir := hooksCfg.SrcContextDir
+	srcDir := filepath.Join(rootDir, srcContextDir)
 	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
 		return nil
 	}

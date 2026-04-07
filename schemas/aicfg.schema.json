@@ -84,11 +84,12 @@
           "type": "object",
           "description": "Hooks deployment configuration. Fires on the PreToolUse event in Claude Code only.",
           "additionalProperties": false,
-          "required": ["src_hooks_file", "hooks_file", "context_dir"],
+          "required": ["src_hooks_file", "src_context_dir", "hooks_file", "context_dir"],
           "properties": {
-            "src_hooks_file": { "type": "string", "description": "Source hooks file to read, relative to repo root. Defaults to 'hooks.yaml' when omitted." },
-            "hooks_file":     { "type": "string", "description": "Output path for the transformed hooks.yaml (Claude PreToolUse format), relative to target root." },
-            "context_dir":    { "type": "string", "description": "Output directory for context files referenced by hook actions, relative to target root." }
+            "src_hooks_file":  { "type": "string", "description": "Source hooks file to read, relative to repo root. Defaults to 'hooks.yaml' when omitted." },
+            "src_context_dir": { "type": "string", "description": "Source directory for context files, relative to repo root. Defaults to 'context' when omitted." },
+            "hooks_file":      { "type": "string", "description": "Output path for the transformed hooks.yaml (Claude PreToolUse format), relative to target root." },
+            "context_dir":     { "type": "string", "description": "Output directory for context files referenced by hook actions, relative to target root." }
           }
         }
       }

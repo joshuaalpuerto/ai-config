@@ -9,9 +9,10 @@ type TypeConfig struct {
 
 // HooksConfig declares where to deploy hooks artifacts for a platform.
 type HooksConfig struct {
-	SrcHooksFile string `yaml:"src_hooks_file"`
-	HooksFile    string `yaml:"hooks_file"`
-	ContextDir   string `yaml:"context_dir"`
+	SrcHooksFile    string `yaml:"src_hooks_file"`
+	HooksFile       string `yaml:"hooks_file"`
+	ContextDir      string `yaml:"context_dir"`
+	SrcContextDir   string `yaml:"src_context_dir,omitempty"`
 }
 
 // PlatformConfig represents one platform block in platforms.yaml.
