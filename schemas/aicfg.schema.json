@@ -14,12 +14,12 @@
     "platforms": {
       "type": "object",
       "description": "Platform output configuration keyed by platform name. Only the 'claude' platform supports the 'hooks' field.",
-      "additionalProperties": false,
       "properties": {
         "claude": { "$ref": "#/$defs/ClaudePlatformConfig" }
       },
-      "patternProperties": {
-        "^(?!claude$)[a-z][a-z0-9_-]*$": { "$ref": "#/$defs/PlatformConfig" }
+      "additionalProperties": { "$ref": "#/$defs/PlatformConfig" },
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_-]*$"
       }
     },
     "tool_map": {
@@ -37,10 +37,9 @@
       "description": "Canonical tool name.",
       "enum": ["Bash","Read","Write","Edit","Glob","Grep","Agent","WebSearch","WebFetch","TaskCreate","TaskGet","TaskList","TaskUpdate"]
     },
-    "PlatformConfig": {
+    "BasePlatformConfig": {
       "type": "object",
       "required": ["target", "types"],
-      "additionalProperties": false,
       "properties": {
         "target": {
           "type": "string",
@@ -72,40 +71,15 @@
         }
       }
     },
+    "PlatformConfig": {
+      "allOf": [{ "$ref": "#/$defs/BasePlatformConfig" }],
+      "unevaluatedProperties": false
+    },
     "ClaudePlatformConfig": {
-      "type": "object",
       "description": "Platform config exclusive to Claude Code. Supports all base platform fields plus 'hooks' (PreToolUse only).",
-      "required": ["target", "types"],
-      "additionalProperties": false,
+      "allOf": [{ "$ref": "#/$defs/BasePlatformConfig" }],
+      "unevaluatedProperties": false,
       "properties": {
-        "target": {
-          "type": "string",
-          "description": "Output root directory for this platform. Absolute or relative to repo root."
-        },
-        "types": {
-          "type": "object",
-          "required": ["agents", "commands", "rules", "skills"],
-          "additionalProperties": false,
-          "properties": {
-            "agents":   { "$ref": "#/$defs/TypeConfig" },
-            "commands": { "$ref": "#/$defs/TypeConfig" },
-            "rules":    { "$ref": "#/$defs/TypeConfig" },
-            "skills":   { "$ref": "#/$defs/TypeConfig" }
-          }
-        },
-        "drop_fields": {
-          "type": "array",
-          "description": "Frontmatter fields to omit when transpiling for this platform.",
-          "items": {
-            "type": "string",
-            "enum": [
-              "name", "description", "model", "context", "agent",
-              "path", "applyTo", "argument-hint",
-              "disable-model-invocation", "tools", "allowed-tools", "paths"
-            ]
-          },
-          "uniqueItems": true
-        },
         "hooks": {
           "type": "object",
           "description": "Hooks deployment configuration. Fires on the PreToolUse event in Claude Code only.",
