@@ -46,9 +46,13 @@ func TranspileHooks(
 
 	platformToolMap := toolMap[platform]
 	contextDirAbs := filepath.Join(targetRoot, hooksCfg.ContextDir)
+	contextDir, err := filepath.Rel(rootDir, contextDirAbs)
+	if err != nil {
+		return fmt.Errorf("computing relative context dir: %w", err)
+	}
 
-	transformRules(src.PreToolUse, platformToolMap, contextDirAbs)
-	transformRules(src.PostToolUse, platformToolMap, contextDirAbs)
+	transformRules(src.PreToolUse, platformToolMap, contextDir)
+	transformRules(src.PostToolUse, platformToolMap, contextDir)
 
 	out, err := yaml.Marshal(&src)
 	if err != nil {
@@ -66,10 +70,10 @@ func TranspileHooks(
 
 // transformRules applies tool and inject path transformations to a rule slice.
 // This helper makes it easy to add new event types without duplicating loop logic.
-func transformRules(rules []hooks.Rule, platformToolMap map[string]string, contextDirAbs string) {
+func transformRules(rules []hooks.Rule, platformToolMap map[string]string, contextDir string) {
 	for i := range rules {
 		rules[i].Match.Tools = translateTools(rules[i].Match.Tools, platformToolMap)
-		rules[i].Action.Inject = translateInjectPath(rules[i].Action.Inject, contextDirAbs)
+		rules[i].Action.Inject = translateInjectPath(rules[i].Action.Inject, contextDir)
 	}
 }
 
@@ -93,11 +97,11 @@ func translateTools(canonical []string, platformMap map[string]string) []string 
 // translateInjectPath rewrites a source-relative inject path to the platform's
 // deployed context directory. Only the filename is preserved — subdirectory
 // nesting within context/ is not supported in this version.
-func translateInjectPath(injectPath, contextDirAbs string) string {
+func translateInjectPath(injectPath, contextDir string) string {
 	if injectPath == "" {
 		return ""
 	}
-	return filepath.Join(contextDirAbs, filepath.Base(injectPath))
+	return filepath.Join(contextDir, filepath.Base(injectPath))
 }
 
 // CopyContextDir copies all files from the source context directory to the platform's context_dir.
