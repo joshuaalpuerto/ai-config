@@ -125,6 +125,7 @@ func isEmptyFrontmatter(fm frontmatter.Frontmatter) bool {
 		fm.ApplyTo == "" &&
 		fm.ArgumentHint == "" &&
 		!fm.DisableModelInvocation &&
+		fm.UserInvocable == nil &&
 		len(fm.Tools) == 0 &&
 		len(fm.AllowedTools) == 0 &&
 		len(fm.Paths) == 0 &&
