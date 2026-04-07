@@ -150,12 +150,20 @@ func executeRun(event Event, scriptPath string, mode PolicyMode) (Response, erro
 
 	var stdout, stderr bytes.Buffer
 	cmd := exec.Command(scriptPath) // #nosec G204 — path comes from operator-controlled hooks.yaml
+	if event.CWD != "" {
+		cmd.Dir = event.CWD
+	}
 	cmd.Stdin = bytes.NewReader(eventJSON)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	if runErr := cmd.Run(); runErr != nil {
 		msg := strings.TrimSpace(stderr.String())
+		if msg == "" {
+			// Many linters (e.g. Biome) write diagnostics to stdout, not stderr.
+			// Fall back to stdout so the user sees the actual error, not a generic message.
+			msg = strings.TrimSpace(stdout.String())
+		}
 		if msg == "" {
 			msg = fmt.Sprintf("Validator %q failed.", scriptPath)
 		}
