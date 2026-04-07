@@ -4,7 +4,7 @@
   "title": "Rule Source Frontmatter",
   "description": "Frontmatter schema for source files under src/rules/.",
   "type": "object",
-  "required": ["description"],
+  "required": [],
   "additionalProperties": false,
   "properties": {
     "description": { "type": "string" },
