@@ -103,18 +103,110 @@ Agent instructions go here.
 
 Platform-specific behaviour is controlled through `overrides.<platform>.<field>`. Fields listed under `drop_fields` in `aicfg.yaml` are omitted for that platform unless an override is present.
 
-## Hook rule precedence
+## Hooks (`hooks.yaml`)
 
-If you define hook policies in `hooks.yaml`, rule order matters.
+Hook rules let you enforce policies on every AI action. Define them in `hooks.yaml` at the repo root.
 
-- Rules are evaluated from top to bottom for each event list (`PreToolUse`, `PostToolUse`).
-- A matching blocking rule (`action.block: true` in enforce mode) short-circuits evaluation.
+### Top-level structure
+
+| Mode      | Behaviour                                                                 |
+|-----------|---------------------------------------------------------------------------|
+| `enforce` | Blocking rules stop the action. Inject/run rules are applied normally.    |
+| `warn`    | Same as enforce but surfaces a warning instead of hard-blocking.          |
+| `audit`   | Rule is evaluated and logged only; never blocks or modifies the action.   |
+
+### Matchers
+
+All matcher fields are optional. When multiple fields are present they are ANDed — the rule fires only when **all** specified matchers match.
+
+| Field           | Type       | Description                                                                 |
+|-----------------|------------|-----------------------------------------------------------------------------|
+| `tools`         | `string[]` | Canonical tool names: `Bash`, `Read`, `Write`, `Edit`, `WebFetch`.          |
+| `command_match` | `string`   | Regex matched against `tool_input.command` (applies to `Bash` tool only).   |
+| `extensions`    | `string[]` | File extensions including the dot (e.g. `".py"`, `".ts"`).                  |
+| `directories`   | `string[]` | Glob patterns for directory paths (e.g. `"src/api/**"`, `"routes/**"`).     |
+
+### Actions
+
+At least one action field should be set. Multiple action fields can be combined in a single rule.
+
+| Field           | Type      | Description                                                                                  |
+|-----------------|-----------|----------------------------------------------------------------------------------------------|
+| `block`         | `boolean` | When `true`, prevents the tool from executing.                                               |
+| `message`       | `string`  | Human-readable reason shown to the developer when a rule blocks.                             |
+| `inject`        | `string`  | Path (relative to repo root) to a Markdown file whose contents are injected into context.    |
+| `inject_inline` | `string`  | Inline text injected directly into context (no external file needed).                        |
+| `run`           | `string`  | Path to a validator script. The event JSON is passed on stdin.                                |
+
+### Full example
+
+```yaml
+version: "1"
+
+
+PreToolUse:
+  # Block destructive shell commands
+  - mode: enforce
+    match:
+      tools: ["Bash"]
+      command_match: "rm\\s+-rf"
+    action:
+      block: true
+      message: "Destructive rm -rf commands are not allowed."
+
+  # Inject Python standards when editing Python files
+  - match:
+      tools: ["Edit", "Write"]
+      extensions: [".py", ".pyi"]
+    action:
+      inject: "context/python-standards.md"
+
+  # Inject REST API guidelines for API routes
+  - match:
+      tools: ["Edit", "Write"]
+      directories: ["src/api/**", "routes/**"]
+    action:
+      inject: "context/api-design-guidelines.md"
+
+  # Inline reminder when reading any file
+  - match:
+      tools: ["Read"]
+    action:
+      inject_inline: "Remember to check for sensitive credentials before sharing file contents."
+
+  # Warn on web fetches (audit trail)
+  - mode: warn
+    match:
+      tools: ["WebFetch"]
+    action:
+      message: "External web fetches are logged for review."
+
+PostToolUse:
+  # Run linter after editing JS/TS files
+  - match:
+      tools: ["Write", "Edit"]
+      extensions: [".ts", ".tsx", ".js", ".jsx"]
+    action:
+      run: "./scripts/lint-check.sh"
+
+  # Run a custom validator after any Bash command
+  - mode: audit
+    match:
+      tools: ["Bash"]
+    action:
+      run: "./scripts/audit-bash.sh"
+```
+
+### Rule precedence
+
+- Rules are evaluated **top to bottom** for each event list (`PreToolUse`, `PostToolUse`).
+- A matching blocking rule (`action.block: true` in `enforce` mode) **short-circuits** evaluation — later rules are skipped.
 - `action.block: false` does not explicitly allow or short-circuit; it is effectively pass-through.
 
-Practical ordering guidance:
+**Ordering guidance:**
 
-- Put highest-priority and most specific blocking rules first.
-- Put broader or catch-all rules later.
-- If two rules can both block, the first matching one wins.
+1. Put highest-priority and most specific blocking rules first.
+2. Put broader or catch-all rules later.
+3. If two rules can both block, the first matching one wins.
 
-This avoids surprising behavior when regex patterns overlap, such as a broad `git commit` matcher and a narrower `git commit.*WIP` block rule.
+This avoids surprising behaviour when regex patterns overlap, such as a broad `git commit` matcher and a narrower `git commit.*WIP` block rule.
