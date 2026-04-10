@@ -219,3 +219,18 @@ PostToolUse:
 3. If two rules can both block, the first matching one wins.
 
 This avoids surprising behaviour when regex patterns overlap, such as a broad `git commit` matcher and a narrower `git commit.*WIP` block rule.
+
+### Performance
+
+Path matching uses [`doublestar`](https://github.com/bmatcuk/doublestar) for `**` glob support. Benchmarks on a typical CI machine (Xeon Platinum 8370C):
+
+| Scenario | Time | Allocations |
+|----------|------|-------------|
+| Single pattern (`*.py`) × 4 files | ~1.1 µs | 0 |
+| Directory glob (`src/api/`) × 4 files | ~246 ns | 0 |
+| Double-star (`src/api/**/*.py`) × 4 files | ~202 ns | 0 |
+| 4 mixed patterns × 4 files | ~1.3 µs | 0 |
+| Full `Evaluate` — 1 rule, 2 patterns | ~1.3 µs | 608 B (10 allocs) |
+| Full `Evaluate` — 5 rules, mixed patterns | ~6.1 µs | 3 KB (50 allocs) |
+
+Allocations come from JSON unmarshalling of `tool_input`, not from glob matching itself. A realistic 5-rule evaluation adds ~6 µs of overhead per tool call — negligible compared to LLM latency (100 ms–10 s).
