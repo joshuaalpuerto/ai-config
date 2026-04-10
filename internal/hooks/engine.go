@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 // Evaluate runs all matching rules for the given event and returns the final Response.
@@ -90,14 +92,8 @@ func matchesRule(event Event, rule Rule) bool {
 
 	filePath, _ := extractFilePath(event.ToolInput)
 
-	if len(m.Extensions) > 0 {
-		if filePath == "" || !extensionMatches(filePath, m.Extensions) {
-			return false
-		}
-	}
-
-	if len(m.Directories) > 0 {
-		if filePath == "" || !directoryMatches(filePath, m.Directories) {
+	if len(m.Paths) > 0 {
+		if filePath == "" || !pathsMatch(filePath, m.Paths) {
 			return false
 		}
 	}
@@ -185,33 +181,40 @@ func toolMatches(toolName string, tools []string) bool {
 	return false
 }
 
-func extensionMatches(filePath string, extensions []string) bool {
-	ext := strings.ToLower(filepath.Ext(filePath))
-	for _, e := range extensions {
-		if strings.ToLower(e) == ext {
+// pathsMatch reports whether filePath matches any of the glob patterns.
+func pathsMatch(filePath string, patterns []string) bool {
+	for _, pattern := range patterns {
+		if matchTarget(filePath, pattern) {
 			return true
 		}
 	}
 	return false
 }
 
-// directoryMatches returns true if filePath is under any of the directory glob patterns.
-// Bare directory entries without wildcards are treated as prefix matches.
-func directoryMatches(filePath string, patterns []string) bool {
-	for _, pattern := range patterns {
-		if !strings.ContainsAny(pattern, "*?[") {
-			prefix := strings.TrimSuffix(pattern, string(os.PathSeparator))
-			if strings.HasPrefix(filePath, prefix+string(os.PathSeparator)) || filePath == prefix {
-				return true
-			}
-			continue
-		}
-		matched, err := filepath.Match(pattern, filePath)
-		if err == nil && matched {
-			return true
-		}
+// matchTarget matches filePath against a single glob pattern with these semantics:
+//   - Trailing "/": directory match — any file whose path falls inside that directory.
+//   - No path separator in pattern: filename-only match — the pattern is matched against
+//     filepath.Base(filePath) so "*.go" matches any .go file regardless of its directory.
+//   - Otherwise: full-path match using doublestar for "**" support.
+func matchTarget(filePath, pattern string) bool {
+	slashPath := filepath.ToSlash(filePath)
+
+	if strings.HasSuffix(pattern, "/") {
+		// Trailing slash means "all files under this directory".
+		dirPattern := strings.TrimSuffix(pattern, "/") + "/**"
+		matched, err := doublestar.Match(dirPattern, slashPath)
+		return err == nil && matched
 	}
-	return false
+
+	if !strings.Contains(pattern, "/") {
+		// No separator → match filename only.
+		matched, err := doublestar.Match(pattern, filepath.Base(filePath))
+		return err == nil && matched
+	}
+
+	// Full path match.
+	matched, err := doublestar.Match(pattern, slashPath)
+	return err == nil && matched
 }
 
 // extractCommand reads the "command" field from Bash tool_input JSON.

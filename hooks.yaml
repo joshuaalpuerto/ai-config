@@ -5,14 +5,14 @@ PreToolUse:
   # Rule: Inject Python coding standards when editing Python files
   - match:
       tools: ["Edit", "Write"]
-      extensions: [".py", ".pyi"]
+      paths: ["*.py", "*.pyi"]
     action:
       inject: "context/python-standards.md"
 
   # Rule: Inject REST API design guidelines for API routes
   - match:
       tools: ["Edit", "Write"]
-      directories: ["src/api/**", "routes/**"]
+      paths: ["src/api/**", "routes/**"]
     action:
       inject: "context/api-design-guidelines.md"
 
@@ -21,6 +21,6 @@ PostToolUse:
   # Rule: Run linting checks after file changes
   - match:
       tools: ["Write", "Edit"]
-      extensions: [".ts", ".tsx", ".js", ".jsx"]
+      paths: ["*.ts", "*.tsx", "*.js", "*.jsx"]
     action:
       run: "./scripts/lint-check.sh"

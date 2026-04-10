@@ -53,8 +53,12 @@ type Rule struct {
 type Matchers struct {
 	Tools        []string `yaml:"tools,omitempty"`
 	CommandMatch string   `yaml:"command_match,omitempty"`
-	Extensions   []string `yaml:"extensions,omitempty"`
-	Directories  []string `yaml:"directories,omitempty"`
+	// Paths is a list of glob patterns matched against the file path.
+	// Patterns without a path separator (e.g. "*.go") match the filename only.
+	// Patterns ending with "/" (e.g. "src/api/") match any file inside that directory.
+	// All other patterns (e.g. "src/**/*.ts") are matched against the full path.
+	// Double-star "**" matches zero or more path segments.
+	Paths []string `yaml:"paths,omitempty"`
 }
 
 // Actions describes what happens when a rule fires.

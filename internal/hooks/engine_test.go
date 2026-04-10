@@ -64,68 +64,71 @@ func TestMatchesRule_CommandMatch_Miss(t *testing.T) {
 	}
 }
 
-func TestMatchesRule_ExtensionFilter_Match(t *testing.T) {
+func TestMatchesRule_Paths_ExtensionGlob_Match(t *testing.T) {
 	rule := Rule{
 		Match: Matchers{
-			Tools:      []string{"Write"},
-			Extensions: []string{".py"},
+			Tools:   []string{"Write"},
+			Paths: []string{"*.py"},
 		},
 		Action: Actions{InjectInline: "python standards"},
 	}
 	if !matchesRule(fileEvent("Write", "/home/user/project/routes.py"), rule) {
-		t.Fatal("expected .py extension to match")
+		t.Fatal("expected *.py target to match any .py file")
 	}
 }
 
-func TestMatchesRule_ExtensionFilter_Miss(t *testing.T) {
+func TestMatchesRule_Paths_ExtensionGlob_Miss(t *testing.T) {
 	rule := Rule{
 		Match: Matchers{
-			Tools:      []string{"Write"},
-			Extensions: []string{".py"},
+			Tools:   []string{"Write"},
+			Paths: []string{"*.py"},
 		},
 		Action: Actions{InjectInline: "python standards"},
 	}
 	if matchesRule(fileEvent("Write", "/home/user/project/routes.ts"), rule) {
-		t.Fatal("expected .ts extension NOT to match .py filter")
+		t.Fatal("expected *.py target NOT to match a .ts file")
 	}
 }
 
-func TestMatchesRule_ExtensionFilter_CaseInsensitive(t *testing.T) {
+func TestMatchesRule_Paths_SuffixPattern_Match(t *testing.T) {
 	rule := Rule{
 		Match: Matchers{
-			Tools:      []string{"Edit"},
-			Extensions: []string{".PY"},
+			Tools:   []string{"Edit"},
+			Paths: []string{"*-view.tsx"},
 		},
-		Action: Actions{InjectInline: "python standards"},
+		Action: Actions{InjectInline: "view standards"},
 	}
-	if !matchesRule(fileEvent("Edit", "/home/user/project/routes.py"), rule) {
-		t.Fatal("expected case-insensitive extension match")
+	if !matchesRule(fileEvent("Edit", "/home/user/project/src/user-view.tsx"), rule) {
+		t.Fatal("expected *-view.tsx target to match a file with that suffix")
 	}
-}
-
-func TestMatchesRule_DirectoryFilter_PrefixMatch(t *testing.T) {
-	rule := Rule{
-		Match: Matchers{
-			Tools:       []string{"Edit"},
-			Directories: []string{"/home/user/project/src"},
-		},
-		Action: Actions{InjectInline: "src standards"},
-	}
-	if !matchesRule(fileEvent("Edit", "/home/user/project/src/api/routes.py"), rule) {
-		t.Fatal("expected directory prefix to match")
+	if matchesRule(fileEvent("Edit", "/home/user/project/src/user-form.tsx"), rule) {
+		t.Fatal("expected *-view.tsx target NOT to match a file without that suffix")
 	}
 }
 
-func TestMatchesRule_DirectoryFilter_Miss(t *testing.T) {
+func TestMatchesRule_Paths_DirectoryTrailingSlash_Match(t *testing.T) {
 	rule := Rule{
 		Match: Matchers{
-			Tools:       []string{"Edit"},
-			Directories: []string{"/home/user/project/src"},
+			Tools:   []string{"Edit"},
+			Paths: []string{"src/api/"},
 		},
 		Action: Actions{InjectInline: "src standards"},
 	}
-	if matchesRule(fileEvent("Edit", "/home/user/project/tests/test_routes.py"), rule) {
-		t.Fatal("expected directory filter NOT to match /tests/")
+	if !matchesRule(fileEvent("Edit", "src/api/routes.py"), rule) {
+		t.Fatal("expected trailing-slash target to match a file inside that directory")
+	}
+}
+
+func TestMatchesRule_Paths_DirectoryTrailingSlash_Miss(t *testing.T) {
+	rule := Rule{
+		Match: Matchers{
+			Tools:   []string{"Edit"},
+			Paths: []string{"src/api/"},
+		},
+		Action: Actions{InjectInline: "src standards"},
+	}
+	if matchesRule(fileEvent("Edit", "src/tests/test_routes.py"), rule) {
+		t.Fatal("expected trailing-slash target NOT to match a file outside that directory")
 	}
 }
 
@@ -149,16 +152,48 @@ func TestMatchesRule_WebFetch_ToolFilter(t *testing.T) {
 	}
 }
 
-func TestMatchesRule_Read_ToolAndExtension(t *testing.T) {
+func TestMatchesRule_Paths_DoubleStarPath_Match(t *testing.T) {
 	rule := Rule{
 		Match: Matchers{
-			Tools:      []string{"Read"},
-			Extensions: []string{".env"},
+			Tools:   []string{"Edit"},
+			Paths: []string{"src/documentation/**/*.tsx"},
+		},
+		Action: Actions{InjectInline: "docs component standards"},
+	}
+	if !matchesRule(fileEvent("Edit", "src/documentation/ui/buttons/Button.tsx"), rule) {
+		t.Fatal("expected src/documentation/**/*.tsx to match a nested .tsx file")
+	}
+	if matchesRule(fileEvent("Edit", "src/other/ui/Button.tsx"), rule) {
+		t.Fatal("expected src/documentation/**/*.tsx NOT to match a file outside src/documentation/")
+	}
+}
+
+func TestMatchesRule_Paths_NestedDirectory_Match(t *testing.T) {
+	rule := Rule{
+		Match: Matchers{
+			Tools:   []string{"Read"},
+			Paths: []string{"src/**/nested/"},
+		},
+		Action: Actions{Block: boolPtr(true)},
+	}
+	if !matchesRule(fileEvent("Read", "src/pkg/nested/config.go"), rule) {
+		t.Fatal("expected src/**/nested/ to match a file inside a nested/ directory")
+	}
+	if matchesRule(fileEvent("Read", "src/pkg/other/config.go"), rule) {
+		t.Fatal("expected src/**/nested/ NOT to match a file outside nested/")
+	}
+}
+
+func TestMatchesRule_Paths_Read_ToolAndGlob(t *testing.T) {
+	rule := Rule{
+		Match: Matchers{
+			Tools:   []string{"Read"},
+			Paths: []string{".env"},
 		},
 		Action: Actions{Block: boolPtr(true)},
 	}
 	if !matchesRule(fileEvent("Read", "/home/user/project/.env"), rule) {
-		t.Fatal("expected Read + .env to match")
+		t.Fatal("expected Read + .env target to match")
 	}
 }
 
@@ -351,11 +386,11 @@ func TestEvaluate_EmptyRules_Allow(t *testing.T) {
 	}
 }
 
-func TestEvaluate_WriteEvent_ExtensionBlock(t *testing.T) {
+func TestEvaluate_WriteEvent_TargetBlock(t *testing.T) {
 	cfg := HooksConfig{
 		PreToolUse: []Rule{
 			{
-				Match:  Matchers{Tools: []string{"Write"}, Extensions: []string{".env"}},
+				Match:  Matchers{Tools: []string{"Write"}, Paths: []string{".env"}},
 				Action: Actions{Block: boolPtr(true), Message: "cannot write .env files"},
 			},
 		},
@@ -370,7 +405,7 @@ func TestEvaluate_EditEvent_InjectInline(t *testing.T) {
 	cfg := HooksConfig{
 		PreToolUse: []Rule{
 			{
-				Match:  Matchers{Tools: []string{"Edit"}, Extensions: []string{".py"}},
+				Match:  Matchers{Tools: []string{"Edit"}, Paths: []string{"*.py"}},
 				Action: Actions{InjectInline: "follow PEP8"},
 			},
 		},
@@ -441,7 +476,7 @@ func TestEvaluate_PostToolUse_BlockAfterExecution(t *testing.T) {
 	cfg := HooksConfig{
 		PostToolUse: []Rule{
 			{
-				Match:  Matchers{Tools: []string{"Write"}, Extensions: []string{".py"}},
+				Match:  Matchers{Tools: []string{"Write"}, Paths: []string{"*.py"}},
 				Action: Actions{Block: boolPtr(true), Message: "Python file write detected"},
 			},
 		},

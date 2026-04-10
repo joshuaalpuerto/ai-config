@@ -44,8 +44,11 @@
       "properties": {
         "tools":         { "type": "array", "items": { "$ref": "#/$defs/CanonicalTool" } },
         "command_match": { "type": "string", "description": "Regex matched against tool_input.command (Bash only)." },
-        "extensions":    { "type": "array", "items": { "type": "string" } },
-        "directories":   { "type": "array", "items": { "type": "string" } }
+        "paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Glob patterns matched against the file path. Three forms are supported: (1) No path separator — e.g. '*.go' — matches the filename only, regardless of directory. (2) Trailing '/' — e.g. 'src/api/' — matches any file inside that directory. (3) Full path glob — e.g. 'src/**/*.ts' — matched against the full file path; '**' matches zero or more path segments."
+        }
       }
     },
     "Actions": {

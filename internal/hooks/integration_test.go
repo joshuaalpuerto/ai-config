@@ -121,7 +121,7 @@ version: "1"
 PreToolUse:
   - match:
       tools: [Write]
-      extensions: [.env]
+      paths: [.env]
     action:
       block: true
       message: "Writing .env files is not allowed."
@@ -145,7 +145,7 @@ func TestIntegration_Write_InjectPythonStandards(t *testing.T) {
 PreToolUse:
   - match:
       tools: [Write]
-      extensions: [.py]
+      paths: ["*.py"]
     action:
       inject: ` + contextFile + `
 `
@@ -172,7 +172,7 @@ version: "1"
 PreToolUse:
   - match:
       tools: [Write]
-      extensions: [.env]
+      paths: [.env]
     action:
       block: true
 `)
@@ -191,7 +191,7 @@ version: "1"
 PreToolUse:
   - match:
       tools: [Edit]
-      extensions: [.py]
+      paths: ["*.py"]
     action:
       inject_inline: "Reminder: follow PEP8 and add type hints."
 `)
@@ -213,7 +213,7 @@ version: "1"
 PreToolUse:
   - match:
       tools: [Edit]
-      directories: [/home/user/my-project/infra]
+      paths: [/home/user/my-project/infra/]
     action:
       block: true
       message: "Direct edits to infra/ are not allowed."
@@ -233,7 +233,7 @@ version: "1"
 PreToolUse:
   - match:
       tools: [Edit]
-      directories: [/home/user/my-project/infra]
+      paths: [/home/user/my-project/infra/]
     action:
       block: true
 `)
@@ -255,7 +255,7 @@ version: "1"
 PreToolUse:
   - match:
       tools: [Read]
-      extensions: [.env]
+      paths: [.env]
     action:
       block: true
       message: "Reading .env files is not allowed."
@@ -272,7 +272,7 @@ version: "1"
 PreToolUse:
   - match:
       tools: [Read]
-      extensions: [.env]
+      paths: [.env]
     action:
       block: true
 `)
@@ -288,7 +288,7 @@ version: "1"
 PreToolUse:
   - match:
       tools: [Read]
-      extensions: [.go]
+      paths: ["*.go"]
     action:
       inject_inline: "Note: follow the project Go style guide."
 `)
@@ -357,12 +357,12 @@ PreToolUse:
       message: "Force push blocked."
   - match:
       tools: [Write, Edit]
-      extensions: [.py]
+      paths: ["*.py"]
     action:
       inject_inline: "Python hint applied."
   - match:
       tools: [Read]
-      extensions: [.env]
+      paths: [.env]
     action:
       block: true
 `)

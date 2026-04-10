@@ -123,8 +123,17 @@ All matcher fields are optional. When multiple fields are present they are ANDed
 |-----------------|------------|-----------------------------------------------------------------------------|
 | `tools`         | `string[]` | Canonical tool names: `Bash`, `Read`, `Write`, `Edit`, `WebFetch`.          |
 | `command_match` | `string`   | Regex matched against `tool_input.command` (applies to `Bash` tool only).   |
-| `extensions`    | `string[]` | File extensions including the dot (e.g. `".py"`, `".ts"`).                  |
-| `directories`   | `string[]` | Glob patterns for directory paths (e.g. `"src/api/**"`, `"routes/**"`).     |
+| `paths`         | `string[]` | Glob patterns matched against the file path. See [Path patterns](#path-patterns) below. |
+
+### Path patterns
+
+`paths` supports three pattern forms:
+
+| Form | Example | Matches |
+|------|---------|----------|
+| No path separator | `*.go`, `*-suffix.tsx` | Filename only, regardless of directory |
+| Trailing `/` | `src/api/`, `src/**/nested/` | Any file inside the matched directory |
+| Full path glob | `src/**/*.ts`, `src/docs/**/component.tsx` | Full file path; `**` matches zero or more path segments |
 
 ### Actions
 
@@ -157,14 +166,14 @@ PreToolUse:
   # Inject Python standards when editing Python files
   - match:
       tools: ["Edit", "Write"]
-      extensions: [".py", ".pyi"]
+      paths: ["*.py", "*.pyi"]
     action:
       inject: "context/python-standards.md"
 
   # Inject REST API guidelines for API routes
   - match:
       tools: ["Edit", "Write"]
-      directories: ["src/api/**", "routes/**"]
+      paths: ["src/api/**", "routes/**"]
     action:
       inject: "context/api-design-guidelines.md"
 
@@ -185,7 +194,7 @@ PostToolUse:
   # Run linter after editing JS/TS files
   - match:
       tools: ["Write", "Edit"]
-      extensions: [".ts", ".tsx", ".js", ".jsx"]
+      paths: ["*.ts", "*.tsx", "*.js", "*.jsx"]
     action:
       run: "./scripts/lint-check.sh"
 
