@@ -133,7 +133,9 @@ All matcher fields are optional. When multiple fields are present they are ANDed
 |------|---------|----------|
 | No path separator | `*.go`, `*-suffix.tsx` | Filename only, regardless of directory |
 | Trailing `/` | `src/api/`, `src/**/nested/` | Any file inside the matched directory |
-| Full path glob | `src/**/*.ts`, `src/docs/**/component.tsx` | Full file path; `**` matches zero or more path segments |
+| Full path glob | `**/src/**/*.ts`, `**/tasks/**/research.md` | Full file path; `**` matches zero or more path segments |
+
+> **Important:** Full-path glob patterns are matched against the **absolute file path** on disk (e.g. `/home/user/project/src/api/routes.ts`). Always prefix them with `**/` so the pattern matches regardless of where the project is located (e.g. `**/src/api/**` not `src/api/**`).
 
 ### Actions
 
@@ -173,7 +175,7 @@ PreToolUse:
   # Inject REST API guidelines for API routes
   - match:
       tools: ["Edit", "Write"]
-      paths: ["src/api/**", "routes/**"]
+      paths: ["**/src/api/**", "**/routes/**"]
     action:
       inject: "context/api-design-guidelines.md"
 

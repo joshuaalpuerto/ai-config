@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/joshuaalpuerto/ai-config/internal/config"
 	"github.com/joshuaalpuerto/ai-config/internal/hooks"
@@ -51,8 +52,12 @@ func TranspileHooks(
 		return fmt.Errorf("computing relative context dir: %w", err)
 	}
 
-	transformRules(src.PreToolUse, platformToolMap, contextDir)
-	transformRules(src.PostToolUse, platformToolMap, contextDir)
+	if err := transformRules(src.PreToolUse, platformToolMap, contextDir, rootDir); err != nil {
+		return fmt.Errorf("transforming PreToolUse rules: %w", err)
+	}
+	if err := transformRules(src.PostToolUse, platformToolMap, contextDir, rootDir); err != nil {
+		return fmt.Errorf("transforming PostToolUse rules: %w", err)
+	}
 
 	out, err := yaml.Marshal(&src)
 	if err != nil {
@@ -70,11 +75,16 @@ func TranspileHooks(
 
 // transformRules applies tool and inject path transformations to a rule slice.
 // This helper makes it easy to add new event types without duplicating loop logic.
-func transformRules(rules []hooks.Rule, platformToolMap map[string]string, contextDir string) {
+func transformRules(rules []hooks.Rule, platformToolMap map[string]string, contextDir, rootDir string) error {
 	for i := range rules {
 		rules[i].Match.Tools = translateTools(rules[i].Match.Tools, platformToolMap)
-		rules[i].Action.Inject = translateInjectPath(rules[i].Action.Inject, contextDir)
+		resolved, err := translateInjectPath(rules[i].Action.Inject, contextDir, rootDir)
+		if err != nil {
+			return err
+		}
+		rules[i].Action.Inject = resolved
 	}
+	return nil
 }
 
 // translateTools maps canonical tool names to platform-specific equivalents.
@@ -94,14 +104,36 @@ func translateTools(canonical []string, platformMap map[string]string) []string 
 	return out
 }
 
-// translateInjectPath rewrites a source-relative inject path to the platform's
-// deployed context directory. Only the filename is preserved — subdirectory
-// nesting within context/ is not supported in this version.
-func translateInjectPath(injectPath, contextDir string) string {
+// platformPrefix is the marker that signals platform-specific path resolution.
+// Paths starting with "$/" have the "$" replaced with the platform's base
+// directory (e.g. .claude, .github) derived from contextDir's parent.
+const platformPrefix = "$/"
+
+// translateInjectPath resolves an inject path for a target platform.
+//
+// Two forms are supported:
+//   - "$/..." — platform-relative: the "$" is replaced with the platform base
+//     directory (filepath.Dir(contextDir)). The remainder of the path is
+//     preserved, including subdirectories.
+//   - Any other path — workspace-relative: kept as-is. The file must exist
+//     relative to rootDir at transpile time.
+func translateInjectPath(injectPath, contextDir, rootDir string) (string, error) {
 	if injectPath == "" {
-		return ""
+		return "", nil
 	}
-	return filepath.Join(contextDir, filepath.Base(injectPath))
+
+	if strings.HasPrefix(injectPath, platformPrefix) {
+		rel := strings.TrimPrefix(injectPath, platformPrefix)
+		baseDir := filepath.Dir(contextDir) // e.g. ".claude" from ".claude/context"
+		return filepath.Join(baseDir, rel), nil
+	}
+
+	// Bare path — validate that the referenced file exists.
+	abs := filepath.Join(rootDir, injectPath)
+	if _, err := os.Stat(abs); err != nil {
+		return "", fmt.Errorf("inject path %q not found (resolved to %s): %w", injectPath, abs, err)
+	}
+	return injectPath, nil
 }
 
 // CopyContextDir copies all files from the source context directory to the platform's context_dir.
