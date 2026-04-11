@@ -536,3 +536,51 @@ func TestEvaluate_PostToolUse_Bash_Run(t *testing.T) {
 		t.Fatalf("expected validation output, got %q", resp.Context)
 	}
 }
+
+func TestExecuteActions_RunInline_ExitZero_InjectsContext(t *testing.T) {
+	rule := Rule{
+		Match:  Matchers{},
+		Action: Actions{RunInline: "echo 'inline ok'"},
+	}
+	resp, err := executeActions(bashEvent("anything"), rule, ModeEnforce)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Continue {
+		t.Fatal("expected Continue=true")
+	}
+	if resp.Context != "inline ok" {
+		t.Fatalf("expected 'inline ok', got %q", resp.Context)
+	}
+}
+
+func TestExecuteActions_RunInline_NonZeroExit_Blocks(t *testing.T) {
+	rule := Rule{
+		Match:  Matchers{},
+		Action: Actions{RunInline: "echo 'bad input' && exit 1"},
+	}
+	resp, err := executeActions(bashEvent("anything"), rule, ModeEnforce)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Continue {
+		t.Fatal("expected block on non-zero exit")
+	}
+}
+
+func TestExecuteActions_RunInline_WarnMode_Continues(t *testing.T) {
+	rule := Rule{
+		Match:  Matchers{},
+		Action: Actions{RunInline: "exit 1"},
+	}
+	resp, err := executeActions(bashEvent("anything"), rule, ModeWarn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Continue {
+		t.Fatal("warn mode must not block")
+	}
+	if resp.Context == "" {
+		t.Fatal("expected [WARNING] context in warn mode")
+	}
+}

@@ -68,6 +68,7 @@ type Actions struct {
 	Inject       string `yaml:"inject,omitempty"`
 	InjectInline string `yaml:"inject_inline,omitempty"`
 	Run          string `yaml:"run,omitempty"`
+	RunInline    string `yaml:"run_inline,omitempty"`
 }
 
 // Settings holds global engine options.

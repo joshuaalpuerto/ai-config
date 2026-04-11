@@ -59,7 +59,8 @@
         "message":       { "type": "string", "description": "Human-readable reason shown when a rule blocks." },
         "inject":        { "type": "string", "description": "Path relative to repo root (e.g. context/standards.md)." },
         "inject_inline": { "type": "string" },
-        "run":           { "type": "string", "description": "Path to a validator script executed with the event JSON on stdin." }
+        "run":           { "type": "string", "description": "Path to a validator script executed with the event JSON on stdin." },
+        "run_inline":    { "type": "string", "description": "Inline shell command executed via sh -c with the event JSON on stdin. Non-zero exit blocks; stdout is injected as context." }
       }
     },
     "Settings": {

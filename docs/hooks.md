@@ -48,6 +48,7 @@ Each rule has an optional `mode` field (default: `enforce`):
     inject: "..."
     inject_inline: "..."
     run: "..."
+    run_inline: "..."
 ```
 
 ## Matchers
@@ -83,6 +84,7 @@ At least one action field should be set. Multiple action fields can be combined 
 | `inject` | `string` | Path to a Markdown file whose contents are injected into context. |
 | `inject_inline` | `string` | Inline text injected directly into context (no external file needed). |
 | `run` | `string` | Path to a validator script. The event JSON is passed on stdin. |
+| `run_inline` | `string` | Inline shell command executed via `sh -c`. The event JSON is passed on stdin. Exit 0 injects stdout as context; non-zero exit blocks (or warns). |
 
 ### Inject path resolution
 
@@ -164,6 +166,13 @@ PostToolUse:
       paths: ["*.ts", "*.tsx", "*.js", "*.jsx"]
     action:
       run: "./scripts/lint-check.sh"
+
+  # Format Go files inline after any Write/Edit (no script file needed)
+  - match:
+      tools: ["Write", "Edit"]
+      paths: ["*.go"]
+    action:
+      run_inline: "cd backend && go fmt ./..."
 
   # Run a custom validator after any Bash command
   - mode: audit

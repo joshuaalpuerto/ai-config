@@ -422,6 +422,44 @@ PreToolUse:
 	}
 }
 
+// --- run_inline action ---
+
+func TestIntegration_PostToolUse_RunInline(t *testing.T) {
+	cfg := intCfg(t, `
+version: "1"
+PostToolUse:
+  - match:
+      tools: [Write]
+    action:
+      run_inline: "echo 'formatted'"
+`)
+	resp, err := Evaluate(postToolUseEvent("Write", "/project/main.go", map[string]any{"success": true}), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Continue {
+		t.Fatal("expected Continue=true")
+	}
+	if resp.Context != "formatted" {
+		t.Fatalf("expected 'formatted', got %q", resp.Context)
+	}
+}
+
+func TestIntegration_PostToolUse_RunInline_NonZeroBlocks(t *testing.T) {
+	cfg := intCfg(t, `
+version: "1"
+PostToolUse:
+  - match:
+      tools: [Write]
+    action:
+      run_inline: "exit 1"
+`)
+	resp, _ := Evaluate(postToolUseEvent("Write", "/project/main.go", map[string]any{"success": true}), cfg)
+	if resp.Continue {
+		t.Fatal("expected block on non-zero exit")
+	}
+}
+
 // --- Fail-open: missing hooks.yaml must allow all tool events ---
 
 func TestIntegration_FailOpen_MissingConfig_AllowAllTools(t *testing.T) {

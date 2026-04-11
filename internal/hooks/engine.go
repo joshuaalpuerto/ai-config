@@ -119,6 +119,10 @@ func executeActions(event Event, rule Rule, mode PolicyMode) (Response, error) {
 		return Response{Continue: true, Context: a.InjectInline}, nil
 	}
 
+	if a.RunInline != "" {
+		return executeRunInline(event, a.RunInline, mode)
+	}
+
 	if a.Inject != "" {
 		data, err := os.ReadFile(a.Inject)
 		if err != nil {
@@ -215,6 +219,40 @@ func matchTarget(filePath, pattern string) bool {
 	// Full path match.
 	matched, err := doublestar.Match(pattern, slashPath)
 	return err == nil && matched
+}
+
+// executeRunInline runs an inline shell command via "sh -c" with the event JSON on stdin.
+// Exit 0: stdout is injected as context. Non-zero exit: blocks (or warns).
+func executeRunInline(event Event, command string, mode PolicyMode) (Response, error) {
+	eventJSON, err := json.Marshal(event)
+	if err != nil {
+		return Response{Continue: true}, fmt.Errorf("marshalling event for run_inline: %w", err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command("sh", "-c", command) // #nosec G204 — command comes from operator-controlled hooks.yaml
+	if event.CWD != "" {
+		cmd.Dir = event.CWD
+	}
+	cmd.Stdin = bytes.NewReader(eventJSON)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if runErr := cmd.Run(); runErr != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg == "" {
+			msg = strings.TrimSpace(stdout.String())
+		}
+		if msg == "" {
+			msg = fmt.Sprintf("Inline command %q failed.", command)
+		}
+		if mode == ModeWarn {
+			return Response{Continue: true, Context: fmt.Sprintf("[WARNING] %s", msg)}, nil
+		}
+		return Response{Continue: false, Context: msg}, nil
+	}
+
+	return Response{Continue: true, Context: strings.TrimSpace(stdout.String())}, nil
 }
 
 // extractCommand reads the "command" field from Bash tool_input JSON.
