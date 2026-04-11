@@ -13,7 +13,7 @@ func TestMatchesRule_ToolFilter_Match(t *testing.T) {
 		Match:  Matchers{Tools: []string{"Bash"}},
 		Action: Actions{Block: boolPtr(true)},
 	}
-	if !matchesRule(bashEvent("echo hi"), rule) {
+	if !matchesRule(bashEvent("echo hi"), rule, nil) {
 		t.Fatal("expected rule to match Bash event")
 	}
 }
@@ -23,7 +23,7 @@ func TestMatchesRule_ToolFilter_NoMatch(t *testing.T) {
 		Match:  Matchers{Tools: []string{"Write"}},
 		Action: Actions{Block: boolPtr(true)},
 	}
-	if matchesRule(bashEvent("echo hi"), rule) {
+	if matchesRule(bashEvent("echo hi"), rule, nil) {
 		t.Fatal("expected rule NOT to match Bash when tools=[Write]")
 	}
 }
@@ -33,7 +33,7 @@ func TestMatchesRule_ToolFilter_CaseInsensitive(t *testing.T) {
 		Match:  Matchers{Tools: []string{"bash"}},
 		Action: Actions{Block: boolPtr(true)},
 	}
-	if !matchesRule(bashEvent("echo hi"), rule) {
+	if !matchesRule(bashEvent("echo hi"), rule, nil) {
 		t.Fatal("expected case-insensitive tool match")
 	}
 }
@@ -46,7 +46,7 @@ func TestMatchesRule_CommandMatch_Hit(t *testing.T) {
 		},
 		Action: Actions{Block: boolPtr(true)},
 	}
-	if !matchesRule(bashEvent("git push --force origin main"), rule) {
+	if !matchesRule(bashEvent("git push --force origin main"), rule, nil) {
 		t.Fatal("expected command regex to match")
 	}
 }
@@ -59,7 +59,7 @@ func TestMatchesRule_CommandMatch_Miss(t *testing.T) {
 		},
 		Action: Actions{Block: boolPtr(true)},
 	}
-	if matchesRule(bashEvent("git status"), rule) {
+	if matchesRule(bashEvent("git status"), rule, nil) {
 		t.Fatal("expected command regex NOT to match git status")
 	}
 }
@@ -72,7 +72,7 @@ func TestMatchesRule_Paths_ExtensionGlob_Match(t *testing.T) {
 		},
 		Action: Actions{InjectInline: "python standards"},
 	}
-	if !matchesRule(fileEvent("Write", "/home/user/project/routes.py"), rule) {
+	if !matchesRule(fileEvent("Write", "/home/user/project/routes.py"), rule, nil) {
 		t.Fatal("expected *.py target to match any .py file")
 	}
 }
@@ -85,7 +85,7 @@ func TestMatchesRule_Paths_ExtensionGlob_Miss(t *testing.T) {
 		},
 		Action: Actions{InjectInline: "python standards"},
 	}
-	if matchesRule(fileEvent("Write", "/home/user/project/routes.ts"), rule) {
+	if matchesRule(fileEvent("Write", "/home/user/project/routes.ts"), rule, nil) {
 		t.Fatal("expected *.py target NOT to match a .ts file")
 	}
 }
@@ -98,10 +98,10 @@ func TestMatchesRule_Paths_SuffixPattern_Match(t *testing.T) {
 		},
 		Action: Actions{InjectInline: "view standards"},
 	}
-	if !matchesRule(fileEvent("Edit", "/home/user/project/src/user-view.tsx"), rule) {
+	if !matchesRule(fileEvent("Edit", "/home/user/project/src/user-view.tsx"), rule, nil) {
 		t.Fatal("expected *-view.tsx target to match a file with that suffix")
 	}
-	if matchesRule(fileEvent("Edit", "/home/user/project/src/user-form.tsx"), rule) {
+	if matchesRule(fileEvent("Edit", "/home/user/project/src/user-form.tsx"), rule, nil) {
 		t.Fatal("expected *-view.tsx target NOT to match a file without that suffix")
 	}
 }
@@ -114,7 +114,7 @@ func TestMatchesRule_Paths_DirectoryTrailingSlash_Match(t *testing.T) {
 		},
 		Action: Actions{InjectInline: "src standards"},
 	}
-	if !matchesRule(fileEvent("Edit", "src/api/routes.py"), rule) {
+	if !matchesRule(fileEvent("Edit", "src/api/routes.py"), rule, nil) {
 		t.Fatal("expected trailing-slash target to match a file inside that directory")
 	}
 }
@@ -127,7 +127,7 @@ func TestMatchesRule_Paths_DirectoryTrailingSlash_Miss(t *testing.T) {
 		},
 		Action: Actions{InjectInline: "src standards"},
 	}
-	if matchesRule(fileEvent("Edit", "src/tests/test_routes.py"), rule) {
+	if matchesRule(fileEvent("Edit", "src/tests/test_routes.py"), rule, nil) {
 		t.Fatal("expected trailing-slash target NOT to match a file outside that directory")
 	}
 }
@@ -137,7 +137,7 @@ func TestMatchesRule_NoMatchers_AlwaysMatches(t *testing.T) {
 		Match:  Matchers{},
 		Action: Actions{InjectInline: "global context"},
 	}
-	if !matchesRule(bashEvent("anything"), rule) {
+	if !matchesRule(bashEvent("anything"), rule, nil) {
 		t.Fatal("expected rule with no matchers to always match")
 	}
 }
@@ -147,7 +147,7 @@ func TestMatchesRule_WebFetch_ToolFilter(t *testing.T) {
 		Match:  Matchers{Tools: []string{"WebFetch"}},
 		Action: Actions{Block: boolPtr(true), Message: "no external fetch"},
 	}
-	if !matchesRule(webFetchEvent("https://example.com"), rule) {
+	if !matchesRule(webFetchEvent("https://example.com"), rule, nil) {
 		t.Fatal("expected WebFetch tool to match")
 	}
 }
@@ -160,10 +160,10 @@ func TestMatchesRule_Paths_DoubleStarPath_Match(t *testing.T) {
 		},
 		Action: Actions{InjectInline: "docs component standards"},
 	}
-	if !matchesRule(fileEvent("Edit", "src/documentation/ui/buttons/Button.tsx"), rule) {
+	if !matchesRule(fileEvent("Edit", "src/documentation/ui/buttons/Button.tsx"), rule, nil) {
 		t.Fatal("expected src/documentation/**/*.tsx to match a nested .tsx file")
 	}
-	if matchesRule(fileEvent("Edit", "src/other/ui/Button.tsx"), rule) {
+	if matchesRule(fileEvent("Edit", "src/other/ui/Button.tsx"), rule, nil) {
 		t.Fatal("expected src/documentation/**/*.tsx NOT to match a file outside src/documentation/")
 	}
 }
@@ -176,10 +176,10 @@ func TestMatchesRule_Paths_NestedDirectory_Match(t *testing.T) {
 		},
 		Action: Actions{Block: boolPtr(true)},
 	}
-	if !matchesRule(fileEvent("Read", "src/pkg/nested/config.go"), rule) {
+	if !matchesRule(fileEvent("Read", "src/pkg/nested/config.go"), rule, nil) {
 		t.Fatal("expected src/**/nested/ to match a file inside a nested/ directory")
 	}
-	if matchesRule(fileEvent("Read", "src/pkg/other/config.go"), rule) {
+	if matchesRule(fileEvent("Read", "src/pkg/other/config.go"), rule, nil) {
 		t.Fatal("expected src/**/nested/ NOT to match a file outside nested/")
 	}
 }
@@ -192,7 +192,7 @@ func TestMatchesRule_Paths_Read_ToolAndGlob(t *testing.T) {
 		},
 		Action: Actions{Block: boolPtr(true)},
 	}
-	if !matchesRule(fileEvent("Read", "/home/user/project/.env"), rule) {
+	if !matchesRule(fileEvent("Read", "/home/user/project/.env"), rule, nil) {
 		t.Fatal("expected Read + .env target to match")
 	}
 }
@@ -310,7 +310,7 @@ func TestEvaluate_BlockShortCircuits(t *testing.T) {
 			},
 		},
 	}
-	resp, err := Evaluate(bashEvent("cmd"), cfg)
+	resp, err := Evaluate(bashEvent("cmd"), cfg, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -335,7 +335,7 @@ func TestEvaluate_MultiRuleInjectAccumulates(t *testing.T) {
 			},
 		},
 	}
-	resp, _ := Evaluate(bashEvent("cmd"), cfg)
+	resp, _ := Evaluate(bashEvent("cmd"), cfg, nil)
 	if !resp.Continue {
 		t.Fatal("expected Continue=true")
 	}
@@ -355,7 +355,7 @@ func TestEvaluate_AuditMode_Skipped(t *testing.T) {
 			},
 		},
 	}
-	resp, _ := Evaluate(bashEvent("cmd"), cfg)
+	resp, _ := Evaluate(bashEvent("cmd"), cfg, nil)
 	if !resp.Continue {
 		t.Fatal("audit mode must not block")
 	}
@@ -370,14 +370,14 @@ func TestEvaluate_NoMatchingRule_Allow(t *testing.T) {
 			},
 		},
 	}
-	resp, _ := Evaluate(bashEvent("echo hi"), cfg)
+	resp, _ := Evaluate(bashEvent("echo hi"), cfg, nil)
 	if !resp.Continue {
 		t.Fatal("expected allow when no rules match")
 	}
 }
 
 func TestEvaluate_EmptyRules_Allow(t *testing.T) {
-	resp, _ := Evaluate(bashEvent("anything"), HooksConfig{})
+	resp, _ := Evaluate(bashEvent("anything"), HooksConfig{}, nil)
 	if !resp.Continue {
 		t.Fatal("expected allow with no rules")
 	}
@@ -395,7 +395,7 @@ func TestEvaluate_WriteEvent_TargetBlock(t *testing.T) {
 			},
 		},
 	}
-	resp, _ := Evaluate(fileEvent("Write", "/project/.env"), cfg)
+	resp, _ := Evaluate(fileEvent("Write", "/project/.env"), cfg, nil)
 	if resp.Continue {
 		t.Fatal("expected .env Write to be blocked")
 	}
@@ -410,7 +410,7 @@ func TestEvaluate_EditEvent_InjectInline(t *testing.T) {
 			},
 		},
 	}
-	resp, _ := Evaluate(fileEvent("Edit", "/project/src/api.py"), cfg)
+	resp, _ := Evaluate(fileEvent("Edit", "/project/src/api.py"), cfg, nil)
 	if !resp.Continue {
 		t.Fatal("expected Continue=true for inject")
 	}
@@ -428,7 +428,7 @@ func TestEvaluate_ReadEvent_NoMatch(t *testing.T) {
 			},
 		},
 	}
-	resp, _ := Evaluate(fileEvent("Read", "/project/README.md"), cfg)
+	resp, _ := Evaluate(fileEvent("Read", "/project/README.md"), cfg, nil)
 	if !resp.Continue {
 		t.Fatal("Read event must not match a Write-only rule")
 	}
@@ -443,7 +443,7 @@ func TestEvaluate_WebFetchEvent_Block(t *testing.T) {
 			},
 		},
 	}
-	resp, _ := Evaluate(webFetchEvent("https://external.example.com"), cfg)
+	resp, _ := Evaluate(webFetchEvent("https://external.example.com"), cfg, nil)
 	if resp.Continue {
 		t.Fatal("expected WebFetch to be blocked")
 	}
@@ -463,7 +463,7 @@ func TestEvaluate_PostToolUse_EventRouting(t *testing.T) {
 			},
 		},
 	}
-	resp, _ := Evaluate(postToolUseEvent("Write", "/tmp/file.txt", map[string]any{"success": true}), cfg)
+	resp, _ := Evaluate(postToolUseEvent("Write", "/tmp/file.txt", map[string]any{"success": true}), cfg, nil)
 	if !resp.Continue {
 		t.Fatal("expected Continue=true")
 	}
@@ -481,7 +481,7 @@ func TestEvaluate_PostToolUse_BlockAfterExecution(t *testing.T) {
 			},
 		},
 	}
-	resp, _ := Evaluate(postToolUseEvent("Write", "/tmp/test.py", map[string]any{"success": true}), cfg)
+	resp, _ := Evaluate(postToolUseEvent("Write", "/tmp/test.py", map[string]any{"success": true}), cfg, nil)
 	if resp.Continue {
 		t.Fatal("expected block after Write of .py file")
 	}
@@ -505,7 +505,7 @@ func TestEvaluate_PostToolUse_IgnoresUnrelatedPreToolUse(t *testing.T) {
 			},
 		},
 	}
-	resp, _ := Evaluate(postToolUseEvent("Write", "/tmp/file.txt", map[string]any{"success": true}), cfg)
+	resp, _ := Evaluate(postToolUseEvent("Write", "/tmp/file.txt", map[string]any{"success": true}), cfg, nil)
 	if resp.Context != "post context" {
 		t.Fatalf("PostToolUse events must not evaluate PreToolUse rules, got %q", resp.Context)
 	}
@@ -525,7 +525,7 @@ func TestEvaluate_PostToolUse_Bash_Run(t *testing.T) {
 			},
 		},
 	}
-	resp, err := Evaluate(postToolUseEvent("Bash", "npm test", map[string]any{"exit_code": 0}), cfg)
+	resp, err := Evaluate(postToolUseEvent("Bash", "npm test", map[string]any{"exit_code": 0}), cfg, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -582,5 +582,64 @@ func TestExecuteActions_RunInline_WarnMode_Continues(t *testing.T) {
 	}
 	if resp.Context == "" {
 		t.Fatal("expected [WARNING] context in warn mode")
+	}
+}
+
+// --- platformToolMap translation ---
+
+func TestEvaluate_ToolTranslation_MappedNameMatches(t *testing.T) {
+	// Rule uses canonical name "Write"; platform maps "Write" → "edit".
+	// Event arrives with platform name "edit" — should match.
+	cfg := HooksConfig{
+		PreToolUse: []Rule{
+			{
+				Match:  Matchers{Tools: []string{"Write"}},
+				Action: Actions{InjectInline: "translated match"},
+			},
+		},
+	}
+	toolMap := map[string]string{"Write": "edit"}
+	resp, err := Evaluate(fileEvent("edit", "/project/main.go"), cfg, toolMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Continue {
+		t.Fatal("expected Continue=true")
+	}
+	if resp.Context != "translated match" {
+		t.Fatalf("expected translated match, got %q", resp.Context)
+	}
+}
+
+func TestEvaluate_ToolTranslation_UnmappedCanonicalFallback(t *testing.T) {
+	// Rule uses "Bash"; no mapping for Bash — falls back to canonical name.
+	cfg := HooksConfig{
+		PreToolUse: []Rule{
+			{
+				Match:  Matchers{Tools: []string{"Bash"}},
+				Action: Actions{InjectInline: "bash matched"},
+			},
+		},
+	}
+	toolMap := map[string]string{"Write": "edit"} // Bash not in map
+	resp, _ := Evaluate(bashEvent("echo hi"), cfg, toolMap)
+	if resp.Context != "bash matched" {
+		t.Fatalf("unmapped tool should fall back to canonical name, got %q", resp.Context)
+	}
+}
+
+func TestEvaluate_ToolTranslation_NilMap_CanonicalMatch(t *testing.T) {
+	// nil map — canonical names compared directly (Claude behaviour).
+	cfg := HooksConfig{
+		PreToolUse: []Rule{
+			{
+				Match:  Matchers{Tools: []string{"Write"}},
+				Action: Actions{InjectInline: "direct match"},
+			},
+		},
+	}
+	resp, _ := Evaluate(fileEvent("Write", "/project/main.go"), cfg, nil)
+	if resp.Context != "direct match" {
+		t.Fatalf("nil map should match canonical name directly, got %q", resp.Context)
 	}
 }

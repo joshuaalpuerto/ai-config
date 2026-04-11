@@ -175,15 +175,6 @@ func TranspileAll(
 				fmt.Fprintf(w, "  %s: %d file(s)\n", typeName, count)
 			}
 		}
-
-		if platCfg.Hooks != nil {
-			if err := CopyContextDir(rootDir, *platCfg.Hooks, targetRoot, w); err != nil {
-				return fmt.Errorf("copying context for %s: %w", platform, err)
-			}
-			if err := TranspileHooks(rootDir, platform, *platCfg.Hooks, toolMap, targetRoot, w); err != nil {
-				return fmt.Errorf("transpiling hooks for %s: %w", platform, err)
-			}
-		}
 	}
 	return nil
 }

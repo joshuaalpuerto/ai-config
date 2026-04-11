@@ -107,7 +107,7 @@ func BenchmarkFullEvaluate_SingleRule_3Patterns(b *testing.B) {
 	}
 	event := fileEvent("Write", "/home/user/project/src/api/routes.py")
 	for i := 0; i < b.N; i++ {
-		Evaluate(event, cfg)
+		Evaluate(event, cfg, nil)
 	}
 }
 
@@ -138,6 +138,6 @@ func BenchmarkFullEvaluate_5Rules_MixedPatterns(b *testing.B) {
 	}
 	event := fileEvent("Write", "/home/user/project/src/api/routes.py")
 	for i := 0; i < b.N; i++ {
-		Evaluate(event, cfg)
+		Evaluate(event, cfg, nil)
 	}
 }

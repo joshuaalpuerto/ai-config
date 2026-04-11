@@ -7,14 +7,14 @@ PreToolUse:
       tools: ["Edit", "Write"]
       paths: ["*.py", "*.pyi"]
     action:
-      inject: "$/context/python-standards.md"
+      inject: "./src/context/python-standards.md"
 
   # Rule: Inject REST API design guidelines for API routes
   - match:
       tools: ["Edit", "Write"]
       paths: ["**/src/api/**", "**/routes/**"]
     action:
-      inject: "$/context/api-design-guidelines.md"
+      inject: "./src/context/api-design-guidelines.md"
 
 # Event: After a tool completes successfully
 PostToolUse:

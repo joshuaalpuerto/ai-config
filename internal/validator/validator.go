@@ -132,24 +132,16 @@ func isEmptyFrontmatter(fm frontmatter.Frontmatter) bool {
 		len(fm.Overrides) == 0
 }
 
-// ValidateHooks validates hooks.yaml against hooks.schema.json when at least one
-// platform has hooks configured. Emits a warning (not an error) if hooks are
-// configured in aicfg.yaml but hooks.yaml is absent — the file is optional.
-func ValidateHooks(rootDir string, platforms config.PlatformsConfig, w io.Writer) Result {
+// ValidateHooks validates hooks.yaml against hooks.schema.json when src_hooks_file is set.
+// Emits a warning (not an error) if the file is absent — it is optional.
+func ValidateHooks(rootDir string, srcHooksFile string, w io.Writer) Result {
 	var result Result
 
-	hasHooksPlatform := false
-	for _, platCfg := range platforms {
-		if platCfg.Hooks != nil {
-			hasHooksPlatform = true
-			break
-		}
-	}
-	if !hasHooksPlatform {
+	if srcHooksFile == "" {
 		return result
 	}
 
-	hooksPath := filepath.Join(rootDir, "hooks.yaml")
+	hooksPath := filepath.Join(rootDir, srcHooksFile)
 	data, err := os.ReadFile(hooksPath)
 	if os.IsNotExist(err) {
 		fmt.Fprintf(w, "WARNING: hooks configured in aicfg.yaml but hooks.yaml not found at %s\n", hooksPath)

@@ -18,12 +18,14 @@ import (
 // Block in Enforce mode short-circuits immediately. Injections from multiple rules
 // accumulate separated by "\n\n". Warn mode converts blocks to injected warnings.
 // Audit mode skips all blocks and injections.
-func Evaluate(event Event, cfg HooksConfig) (Response, error) {
+// platformToolMap translates canonical rule tool names to platform-specific equivalents
+// at match time. Pass nil to skip translation (e.g. Claude, which uses canonical names).
+func Evaluate(event Event, cfg HooksConfig, platformToolMap map[string]string) (Response, error) {
 	rules := getRulesForEvent(event, cfg)
 	var accumulated string
 
 	for _, rule := range rules {
-		if !matchesRule(event, rule) {
+		if !matchesRule(event, rule, platformToolMap) {
 			continue
 		}
 
@@ -72,10 +74,12 @@ func getRulesForEvent(event Event, cfg HooksConfig) []Rule {
 
 // matchesRule returns true only when ALL configured matchers pass.
 // An unconfigured matcher always passes (opt-in narrowing).
-func matchesRule(event Event, rule Rule) bool {
+// platformToolMap translates canonical rule tool names to platform-specific names before
+// comparing against the event's tool name. Pass nil to skip translation.
+func matchesRule(event Event, rule Rule, platformToolMap map[string]string) bool {
 	m := rule.Match
 
-	if len(m.Tools) > 0 && !toolMatches(event.ToolName, m.Tools) {
+	if len(m.Tools) > 0 && !toolMatches(event.ToolName, m.Tools, platformToolMap) {
 		return false
 	}
 
@@ -176,9 +180,17 @@ func executeRun(event Event, scriptPath string, mode PolicyMode) (Response, erro
 	return Response{Continue: true, Context: strings.TrimSpace(stdout.String())}, nil
 }
 
-func toolMatches(toolName string, tools []string) bool {
+func toolMatches(toolName string, tools []string, platformToolMap map[string]string) bool {
 	for _, t := range tools {
-		if strings.EqualFold(t, toolName) {
+		// Translate the canonical rule tool name to its platform equivalent, if a
+		// mapping exists. Fall back to the canonical name when there is no mapping.
+		mapped := t
+		if platformToolMap != nil {
+			if v, ok := platformToolMap[t]; ok {
+				mapped = v
+			}
+		}
+		if strings.EqualFold(mapped, toolName) {
 			return true
 		}
 	}

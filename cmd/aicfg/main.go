@@ -97,7 +97,7 @@ func buildCmd(opts *rootOpts) *cobra.Command {
 				return err
 			}
 
-			if claudePlatform, ok := opts.cfg.Platforms["claude"]; ok && claudePlatform.Hooks != nil {
+			if opts.cfg.SrcHooksFile != "" {
 				claudeDir := filepath.Join(opts.rootDir, ".claude")
 				if err := settings.MergeClaudeSettings(claudeDir, opts.platform); err != nil {
 					return fmt.Errorf("updating .claude/settings.json: %w", err)
@@ -120,7 +120,7 @@ func validateCmd(opts *rootOpts) *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			result := validator.ValidateAll(opts.srcDir, opts.cfg.Platforms, opts.cfg.ToolMap, os.Stdout)
-			hookResult := validator.ValidateHooks(opts.rootDir, opts.cfg.Platforms, os.Stdout)
+			hookResult := validator.ValidateHooks(opts.rootDir, opts.cfg.SrcHooksFile, os.Stdout)
 			result.Errors += hookResult.Errors
 			result.Warnings += hookResult.Warnings
 			if result.Errors > 0 {
@@ -147,25 +147,29 @@ func cleanCmd(opts *rootOpts) *cobra.Command {
 }
 
 func hooksCmd(opts *rootOpts) *cobra.Command {
-	var hooksFilePath string
-
 	cmd := &cobra.Command{
 		Use:   "hooks",
 		Short: "Evaluate PreToolUse hook event from stdin",
 		Long:  "Reads a hook event from stdin, evaluates configured rules, and writes platform-specific output to stdout.",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return loadConfigs(opts)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runHooks(hooksFilePath, opts.platform)
+			if opts.cfg.SrcHooksFile == "" {
+				return fmt.Errorf("src_hooks_file not set in aicfg.yaml")
+			}
+			hooksFilePath := filepath.Join(opts.rootDir, opts.cfg.SrcHooksFile)
+			return runHooks(hooksFilePath, opts.platform, opts.cfg.ToolMap[opts.platform])
 		},
 	}
-	cmd.Flags().StringVar(&hooksFilePath, "config", ".claude/hooks.yaml", "path to deployed hooks.yaml")
 	return cmd
 }
 
-// runHooks reads a hook event from stdin, evaluates rules from the deployed hooks.yaml,
+// runHooks reads a hook event from stdin, evaluates rules from hooks.yaml,
 // and writes platform-specific output. Evaluation errors are fail-open: diagnostic written
 // to stderr, exit 0, so the AI assistant is never blocked by a broken hook configuration.
 // Platform misconfiguration (unknown platform) is fail-loud: exits 1.
-func runHooks(hooksFilePath, platform string) error {
+func runHooks(hooksFilePath, platform string, platformToolMap map[string]string) error {
 	data, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "aicfg hooks: reading stdin: %v\n", err)
@@ -187,7 +191,7 @@ func runHooks(hooksFilePath, platform string) error {
 		os.Exit(2)
 	}
 
-	resp, err := hooks.Evaluate(event, cfg)
+	resp, err := hooks.Evaluate(event, cfg, platformToolMap)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "aicfg hooks: evaluating rules: %v\n", err)
 		return nil // fail-open on engine errors

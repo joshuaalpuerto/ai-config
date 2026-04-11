@@ -23,7 +23,7 @@ PreToolUse:
       block: true
       message: "Force-pushing is not allowed."
 `)
-	resp, err := Evaluate(newBashEvent("git push --force origin main", "Force push"), cfg)
+	resp, err := Evaluate(newBashEvent("git push --force origin main", "Force push"), cfg, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ PreToolUse:
       block: true
       message: "Force-pushing is not allowed."
 `)
-	resp, err := Evaluate(newBashEvent("npm test", "Run test suite"), cfg)
+	resp, err := Evaluate(newBashEvent("npm test", "Run test suite"), cfg, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ PreToolUse:
       block: true
       message: "Deleting the root filesystem is not allowed."
 `)
-	resp, _ := Evaluate(newBashEvent("rm -rf /", "Delete everything"), cfg)
+	resp, _ := Evaluate(newBashEvent("rm -rf /", "Delete everything"), cfg, nil)
 	if resp.Continue {
 		t.Fatal("expected block for rm -rf /")
 	}
@@ -84,7 +84,7 @@ PreToolUse:
       block: true
       message: "Pushing without review."
 `)
-	resp, _ := Evaluate(newBashEvent("git push origin main", "Push branch"), cfg)
+	resp, _ := Evaluate(newBashEvent("git push origin main", "Push branch"), cfg, nil)
 	if !resp.Continue {
 		t.Fatal("warn mode must not block")
 	}
@@ -103,7 +103,7 @@ PreToolUse:
     action:
       block: true
 `)
-	resp, _ := Evaluate(newBashEvent("anything", ""), cfg)
+	resp, _ := Evaluate(newBashEvent("anything", ""), cfg, nil)
 	if !resp.Continue {
 		t.Fatal("audit mode must never block")
 	}
@@ -126,7 +126,7 @@ PreToolUse:
       block: true
       message: "Writing .env files is not allowed."
 `)
-	resp, _ := Evaluate(newWriteEvent("/home/user/my-project/.env", "SECRET=abc"), cfg)
+	resp, _ := Evaluate(newWriteEvent("/home/user/my-project/.env", "SECRET=abc"), cfg, nil)
 	if resp.Continue {
 		t.Fatal("expected .env write to be blocked")
 	}
@@ -157,7 +157,7 @@ PreToolUse:
 		t.Fatal(err)
 	}
 
-	resp, _ := Evaluate(newWriteEvent("/home/user/my-project/src/api/routes.py", "def hello(): pass"), cfg)
+	resp, _ := Evaluate(newWriteEvent("/home/user/my-project/src/api/routes.py", "def hello(): pass"), cfg, nil)
 	if !resp.Continue {
 		t.Fatal("expected allow with inject")
 	}
@@ -176,7 +176,7 @@ PreToolUse:
     action:
       block: true
 `)
-	resp, _ := Evaluate(newWriteEvent("/home/user/my-project/src/main.go", "package main"), cfg)
+	resp, _ := Evaluate(newWriteEvent("/home/user/my-project/src/main.go", "package main"), cfg, nil)
 	if !resp.Continue {
 		t.Fatal("expected non-.env Write to be allowed")
 	}
@@ -198,6 +198,7 @@ PreToolUse:
 	resp, _ := Evaluate(
 		newEditEvent("/home/user/my-project/src/service.py", "def foo():", "def foo() -> None:"),
 		cfg,
+		nil,
 	)
 	if !resp.Continue {
 		t.Fatal("expected Continue=true for inject")
@@ -221,6 +222,7 @@ PreToolUse:
 	resp, _ := Evaluate(
 		newEditEvent("/home/user/my-project/infra/main.tf", "old", "new"),
 		cfg,
+		nil,
 	)
 	if resp.Continue {
 		t.Fatal("expected edit in infra/ to be blocked")
@@ -240,6 +242,7 @@ PreToolUse:
 	resp, _ := Evaluate(
 		newEditEvent("/home/user/my-project/src/handler.go", "old", "new"),
 		cfg,
+		nil,
 	)
 	if !resp.Continue {
 		t.Fatal("expected Edit outside infra/ to be allowed")
@@ -260,7 +263,7 @@ PreToolUse:
       block: true
       message: "Reading .env files is not allowed."
 `)
-	resp, _ := Evaluate(newReadEvent("/home/user/my-project/.env"), cfg)
+	resp, _ := Evaluate(newReadEvent("/home/user/my-project/.env"), cfg, nil)
 	if resp.Continue {
 		t.Fatal("expected .env Read to be blocked")
 	}
@@ -276,7 +279,7 @@ PreToolUse:
     action:
       block: true
 `)
-	resp, _ := Evaluate(newReadEvent("/home/user/my-project/README.md"), cfg)
+	resp, _ := Evaluate(newReadEvent("/home/user/my-project/README.md"), cfg, nil)
 	if !resp.Continue {
 		t.Fatal("expected normal Read to be allowed")
 	}
@@ -292,7 +295,7 @@ PreToolUse:
     action:
       inject_inline: "Note: follow the project Go style guide."
 `)
-	resp, _ := Evaluate(newReadEvent("/home/user/my-project/internal/handler.go"), cfg)
+	resp, _ := Evaluate(newReadEvent("/home/user/my-project/internal/handler.go"), cfg, nil)
 	if !resp.Continue {
 		t.Fatal("expected Continue=true")
 	}
@@ -314,7 +317,7 @@ PreToolUse:
       block: true
       message: "External web fetches are not permitted."
 `)
-	resp, _ := Evaluate(newWebFetchEvent("https://external.example.com/api", "Extract API endpoints"), cfg)
+	resp, _ := Evaluate(newWebFetchEvent("https://external.example.com/api", "Extract API endpoints"), cfg, nil)
 	if resp.Continue {
 		t.Fatal("expected WebFetch to be blocked")
 	}
@@ -334,7 +337,7 @@ PreToolUse:
       block: true
       message: "External fetch detected."
 `)
-	resp, _ := Evaluate(newWebFetchEvent("https://external.example.com/api", "Get data"), cfg)
+	resp, _ := Evaluate(newWebFetchEvent("https://external.example.com/api", "Get data"), cfg, nil)
 	if !resp.Continue {
 		t.Fatal("warn mode must not block WebFetch")
 	}
@@ -408,7 +411,7 @@ PreToolUse:
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			resp, err := Evaluate(tc.event, cfg)
+			resp, err := Evaluate(tc.event, cfg, nil)
 			if err != nil {
 				t.Fatalf("Evaluate error: %v", err)
 			}
@@ -433,7 +436,7 @@ PostToolUse:
     action:
       run_inline: "echo 'formatted'"
 `)
-	resp, err := Evaluate(postToolUseEvent("Write", "/project/main.go", map[string]any{"success": true}), cfg)
+	resp, err := Evaluate(postToolUseEvent("Write", "/project/main.go", map[string]any{"success": true}), cfg, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -454,7 +457,7 @@ PostToolUse:
     action:
       run_inline: "exit 1"
 `)
-	resp, _ := Evaluate(postToolUseEvent("Write", "/project/main.go", map[string]any{"success": true}), cfg)
+	resp, _ := Evaluate(postToolUseEvent("Write", "/project/main.go", map[string]any{"success": true}), cfg, nil)
 	if resp.Continue {
 		t.Fatal("expected block on non-zero exit")
 	}
@@ -486,7 +489,7 @@ func TestIntegration_FailOpen_MissingConfig_AllowAllTools(t *testing.T) {
 			}
 			// When config is unavailable the caller honours fail_open and allows.
 			// Evaluate with an empty config simulates the fail-open path.
-			resp, _ := Evaluate(tc.event, HooksConfig{})
+			resp, _ := Evaluate(tc.event, HooksConfig{}, nil)
 			if !resp.Continue {
 				t.Fatalf("fail-open path must allow %s events", tc.name)
 			}

@@ -11,12 +11,14 @@
       "type": "string",
       "description": "Source directory containing agent/command/rule/skill files. Relative to repo root or absolute."
     },
+    "src_hooks_file": {
+      "type": "string",
+      "description": "Source hooks file, relative to repo root. When set, enables hooks validation, settings.json registration, and runtime evaluation via 'aicfg hooks'."
+    },
     "platforms": {
       "type": "object",
       "description": "Platform output configuration keyed by platform name. Only the 'claude' platform supports the 'hooks' field.",
-      "properties": {
-        "claude": { "$ref": "#/$defs/ClaudePlatformConfig" }
-      },
+      "properties": {},
       "additionalProperties": { "$ref": "#/$defs/PlatformConfig" },
       "propertyNames": {
         "pattern": "^[a-z][a-z0-9_-]*$"
@@ -74,25 +76,6 @@
     "PlatformConfig": {
       "allOf": [{ "$ref": "#/$defs/BasePlatformConfig" }],
       "unevaluatedProperties": false
-    },
-    "ClaudePlatformConfig": {
-      "description": "Platform config exclusive to Claude Code. Supports all base platform fields plus 'hooks' (PreToolUse only).",
-      "allOf": [{ "$ref": "#/$defs/BasePlatformConfig" }],
-      "unevaluatedProperties": false,
-      "properties": {
-        "hooks": {
-          "type": "object",
-          "description": "Hooks deployment configuration. Fires on the PreToolUse event in Claude Code only.",
-          "additionalProperties": false,
-          "required": ["src_hooks_file", "src_context_dir", "hooks_file", "context_dir"],
-          "properties": {
-            "src_hooks_file":  { "type": "string", "description": "Source hooks file to read, relative to repo root. Defaults to 'hooks.yaml' when omitted." },
-            "src_context_dir": { "type": "string", "description": "Source directory for context files, relative to repo root. Defaults to 'context' when omitted." },
-            "hooks_file":      { "type": "string", "description": "Output path for the transformed hooks.yaml (Claude PreToolUse format), relative to target root." },
-            "context_dir":     { "type": "string", "description": "Output directory for context files referenced by hook actions, relative to target root." }
-          }
-        }
-      }
     },
     "TypeConfig": {
       "type": "object",

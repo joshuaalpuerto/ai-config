@@ -1,6 +1,7 @@
 # yaml-language-server: $schema=schemas/aicfg.schema.json
 
 src_dir: src
+src_hooks_file: hooks.yaml
 
 platforms:
   # Claude Code — canonical platform, passthrough
@@ -21,11 +22,6 @@ platforms:
         suffix: .md
     drop_fields:
       - applyTo
-    hooks:
-      src_hooks_file: hooks.yaml
-      hooks_file: .claude/hooks.yaml
-      src_context_dir: src/context
-      context_dir: .claude/context
 
   # GitHub Copilot
   github:
