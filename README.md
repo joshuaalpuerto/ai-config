@@ -42,14 +42,28 @@ your-project/
 Source files live in `src/` as Markdown with YAML frontmatter. The build system reads each file, maps tool names, resolves platform overrides, drops unsupported fields, and writes the result to the appropriate output directory.
 
 ```
-src/ (canonical source)
-  └── agents, commands, rules, skills
+src/                      (canonical source)
+  ├── agents/
+  ├── commands/
+  ├── rules/
+  └── skills/
 
 → transpile →
 
-.claude/   (Claude Code output)
-.github/   (GitHub Copilot output)
+.claude/                  (Claude Code)
+  ├── agents/             *.md
+  ├── commands/           *.md
+  ├── rules/              *.md
+  └── skills/             *.md
+
+.github/                  (GitHub Copilot)
+  ├── agents/             *.agent.md
+  ├── prompts/            *.prompt.md        (source: commands/)
+  ├── instructions/       *.instructions.md  (source: rules/)
+  └── skills/             *.md
 ```
+
+Output directory names and file suffixes are platform-specific and configured in `aicfg.yaml`.
 
 ## Project structure
 
@@ -64,6 +78,8 @@ schemas/
   *.schema.json # JSON Schema validation for source types (embedded in binary)
 ```
 
+See [docs/aicfg-config.md](docs/aicfg-config.md) for a full reference of all `aicfg.yaml` fields.
+
 ## Commands
 
 ```bash
@@ -74,12 +90,18 @@ make validate   # Validate source file frontmatter
 make watch      # Rebuild on changes (requires fswatch)
 ```
 
-## Custom source directory
-
-By default the build reads from `src/` in the repo root. Override with `SRC_DIR`:
+The `aicfg` binary also exposes a `hooks` subcommand used at runtime by Claude Code:
 
 ```bash
-SRC_DIR=/path/to/custom/src make build
+aicfg hooks     # Evaluate a PreToolUse hook event from stdin
+```
+
+## Custom source directory
+
+By default the build reads from `src/` in the repo root. Change the `src_dir` field in `aicfg.yaml` to use a different path — absolute or relative to the repo root:
+
+```yaml
+src_dir: /path/to/custom/src
 ```
 
 ## Source file format
@@ -105,58 +127,12 @@ Platform-specific behaviour is controlled through `overrides.<platform>.<field>`
 
 ## Hooks (`hooks.yaml`)
 
-Hook rules let you enforce policies on every AI action. Define them in `hooks.yaml` at the repo root.
-
-### Top-level structure
-
-| Mode      | Behaviour                                                                 |
-|-----------|---------------------------------------------------------------------------|
-| `enforce` | Blocking rules stop the action. Inject/run rules are applied normally.    |
-| `warn`    | Same as enforce but surfaces a warning instead of hard-blocking.          |
-| `audit`   | Rule is evaluated and logged only; never blocks or modifies the action.   |
-
-### Matchers
-
-All matcher fields are optional. When multiple fields are present they are ANDed — the rule fires only when **all** specified matchers match.
-
-| Field           | Type       | Description                                                                 |
-|-----------------|------------|-----------------------------------------------------------------------------|
-| `tools`         | `string[]` | Canonical tool names: `Bash`, `Read`, `Write`, `Edit`, `WebFetch`.          |
-| `command_match` | `string`   | Regex matched against `tool_input.command` (applies to `Bash` tool only).   |
-| `paths`         | `string[]` | Glob patterns matched against the file path. See [Path patterns](#path-patterns) below. |
-
-### Path patterns
-
-`paths` supports three pattern forms:
-
-| Form | Example | Matches |
-|------|---------|----------|
-| No path separator | `*.go`, `*-suffix.tsx` | Filename only, regardless of directory |
-| Trailing `/` | `src/api/`, `src/**/nested/` | Any file inside the matched directory |
-| Full path glob | `**/src/**/*.ts`, `**/tasks/**/research.md` | Full file path; `**` matches zero or more path segments |
-
-> **Important:** Full-path glob patterns are matched against the **absolute file path** on disk (e.g. `/home/user/project/src/api/routes.ts`). Always prefix them with `**/` so the pattern matches regardless of where the project is located (e.g. `**/src/api/**` not `src/api/**`).
-
-### Actions
-
-At least one action field should be set. Multiple action fields can be combined in a single rule.
-
-| Field           | Type      | Description                                                                                  |
-|-----------------|-----------|----------------------------------------------------------------------------------------------|
-| `block`         | `boolean` | When `true`, prevents the tool from executing.                                               |
-| `message`       | `string`  | Human-readable reason shown to the developer when a rule blocks.                             |
-| `inject`        | `string`  | Path (relative to repo root) to a Markdown file whose contents are injected into context.    |
-| `inject_inline` | `string`  | Inline text injected directly into context (no external file needed).                        |
-| `run`           | `string`  | Path to a validator script. The event JSON is passed on stdin.                                |
-
-### Full example
+Hook rules enforce policies on every AI action — blocking dangerous commands, injecting context, or running validators. Define them in `hooks.yaml` at the repo root:
 
 ```yaml
 version: "1"
 
-
 PreToolUse:
-  # Block destructive shell commands
   - mode: enforce
     match:
       tools: ["Bash"]
@@ -165,74 +141,12 @@ PreToolUse:
       block: true
       message: "Destructive rm -rf commands are not allowed."
 
-  # Inject Python standards when editing Python files
-  - match:
-      tools: ["Edit", "Write"]
-      paths: ["*.py", "*.pyi"]
-    action:
-      inject: "context/python-standards.md"
-
-  # Inject REST API guidelines for API routes
-  - match:
-      tools: ["Edit", "Write"]
-      paths: ["**/src/api/**", "**/routes/**"]
-    action:
-      inject: "context/api-design-guidelines.md"
-
-  # Inline reminder when reading any file
-  - match:
-      tools: ["Read"]
-    action:
-      inject_inline: "Remember to check for sensitive credentials before sharing file contents."
-
-  # Warn on web fetches (audit trail)
-  - mode: warn
-    match:
-      tools: ["WebFetch"]
-    action:
-      message: "External web fetches are logged for review."
-
 PostToolUse:
-  # Run linter after editing JS/TS files
   - match:
       tools: ["Write", "Edit"]
-      paths: ["*.ts", "*.tsx", "*.js", "*.jsx"]
+      paths: ["*.ts", "*.tsx"]
     action:
       run: "./scripts/lint-check.sh"
-
-  # Run a custom validator after any Bash command
-  - mode: audit
-    match:
-      tools: ["Bash"]
-    action:
-      run: "./scripts/audit-bash.sh"
 ```
 
-### Rule precedence
-
-- Rules are evaluated **top to bottom** for each event list (`PreToolUse`, `PostToolUse`).
-- A matching blocking rule (`action.block: true` in `enforce` mode) **short-circuits** evaluation — later rules are skipped.
-- `action.block: false` does not explicitly allow or short-circuit; it is effectively pass-through.
-
-**Ordering guidance:**
-
-1. Put highest-priority and most specific blocking rules first.
-2. Put broader or catch-all rules later.
-3. If two rules can both block, the first matching one wins.
-
-This avoids surprising behaviour when regex patterns overlap, such as a broad `git commit` matcher and a narrower `git commit.*WIP` block rule.
-
-### Performance
-
-Path matching uses [`doublestar`](https://github.com/bmatcuk/doublestar) for `**` glob support. Benchmarks on a typical CI machine (Xeon Platinum 8370C):
-
-| Scenario | Time | Allocations |
-|----------|------|-------------|
-| Single pattern (`*.py`) × 4 files | ~1.1 µs | 0 |
-| Directory glob (`src/api/`) × 4 files | ~246 ns | 0 |
-| Double-star (`src/api/**/*.py`) × 4 files | ~202 ns | 0 |
-| 4 mixed patterns × 4 files | ~1.3 µs | 0 |
-| Full `Evaluate` — 1 rule, 2 patterns | ~1.3 µs | 608 B (10 allocs) |
-| Full `Evaluate` — 5 rules, mixed patterns | ~6.1 µs | 3 KB (50 allocs) |
-
-Allocations come from JSON unmarshalling of `tool_input`, not from glob matching itself. A realistic 5-rule evaluation adds ~6 µs of overhead per tool call — negligible compared to LLM latency (100 ms–10 s).
+For the full reference — modes, matchers, path patterns, inject actions, rule precedence, and settings — see [docs/hooks.md](docs/hooks.md).
