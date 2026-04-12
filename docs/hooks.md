@@ -1,6 +1,6 @@
 # Hooks Reference (`hooks.yaml`)
 
-Hook rules enforce policies on every AI action. Define them in `hooks.yaml` at the repo root. `aicfg build` transforms and deploys them to each platform.
+Hook rules enforce policies on every AI action. Define them in `hooks.yaml` at the repo root and point `aicfg.yaml` to it with `src_hooks_file`.
 
 ## Top-level structure
 
@@ -88,12 +88,12 @@ At least one action field should be set. Multiple action fields can be combined 
 
 ### Inject path resolution
 
-The `inject` field supports two path forms:
+The `inject` field accepts a workspace-relative path. The file is read and its contents injected into context at evaluation time. The path is resolved relative to the repo root.
 
-- **`$/` prefix** — Platform-relative. `$` is replaced with the platform base directory at build time:
-  - Claude: `$/context/standards.md` → `.claude/context/standards.md`
-  - GitHub: `$/context/standards.md` → `.github/context/standards.md`
-- **No prefix** — Workspace-relative. The path is used as-is. The file must exist at transpile time.
+```yaml
+# Workspace-relative path — resolved from the repo root
+inject: "./src/context/python-standards.md"
+```
 
 ## Settings
 
@@ -122,24 +122,20 @@ PreToolUse:
       message: "Destructive rm -rf commands are not allowed."
 
   # Inject Python standards when editing Python files
-  # "$/" is the platform prefix — "$" is replaced with the platform base dir:
-  #   Claude → .claude/context/python-standards.md
-  #   GitHub → .github/context/python-standards.md
   - match:
       tools: ["Edit", "Write"]
       paths: ["*.py", "*.pyi"]
     action:
-      inject: "$/context/python-standards.md"
+      inject: "./src/context/python-standards.md"
 
   # Inject REST API guidelines for API routes
   - match:
       tools: ["Edit", "Write"]
       paths: ["**/src/api/**", "**/routes/**"]
     action:
-      inject: "$/context/api-design-guidelines.md"
+      inject: "./src/context/api-design-guidelines.md"
 
-  # Paths without "$/" are workspace-relative — passed through as-is.
-  # The file must exist at transpile time.
+  # Paths are workspace-relative — resolved from the repo root.
   - match:
       tools: ["Write"]
       paths: ["docs/**"]

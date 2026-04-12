@@ -7,6 +7,7 @@
 | Field | Required | Description |
 |-------|----------|-------------|
 | `src_dir` | ✓ | Source directory. Relative to repo root or absolute. |
+| `src_hooks_file` | — | Path to the hooks definition file. Relative to repo root. |
 | `platforms` | ✓ | Output configuration keyed by platform name. |
 | `tool_map` | ✓ | Canonical tool name → platform-specific name mappings. |
 
@@ -22,18 +23,27 @@ Points to the root of your source definitions. Relative paths are resolved from 
 
 ---
 
+## `src_hooks_file`
+
+```yaml
+src_hooks_file: hooks.yaml
+```
+
+Points to the hooks definition file. Relative paths are resolved from the repo root. When set, the hooks engine reads rules from this file at runtime. If omitted, hook evaluation is skipped.
+
+---
+
 ## `platforms`
 
-Each key is a platform name (e.g. `claude`, `github`). Platform names must match `^[a-z][a-z0-9_-]*$`. The `claude` platform additionally supports a `hooks` field.
+Each key is a platform name (e.g. `claude`, `github`). Platform names must match `^[a-z][a-z0-9_-]*$`.
 
 ### Per-platform fields
 
 | Field | Required | Description |
-|-------|----------|-------------|
+|-------|----------|--------------|
 | `target` | ✓ | Output root directory. Relative to repo root or absolute. |
 | `types` | ✓ | Per-type output config. Must define all four: `agents`, `commands`, `rules`, `skills`. |
 | `drop_fields` | — | Frontmatter fields to omit for this platform. |
-| `hooks` | — | Hooks deployment config. **Claude only.** |
 
 ### `types`
 
@@ -50,17 +60,6 @@ Each of `agents`, `commands`, `rules`, and `skills` must be defined:
 An array of canonical frontmatter field names to omit when writing output for this platform. A field can still appear in the output if a per-file `overrides.<platform>.<field>` is set.
 
 Droppable field names: `name`, `description`, `model`, `context`, `agent`, `path`, `applyTo`, `argument-hint`, `disable-model-invocation`, `tools`, `allowed-tools`, `paths`.
-
-### `hooks` (Claude only)
-
-Configures where hook files are read from and written to during `aicfg build`.
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `src_hooks_file` | ✓ | Source hooks file to read, relative to repo root. |
-| `src_context_dir` | ✓ | Source directory for context files referenced by hook `inject` actions. |
-| `hooks_file` | ✓ | Output path for the transformed hooks file, relative to `target`. |
-| `context_dir` | ✓ | Output directory for context files, relative to `target`. |
 
 ---
 
@@ -94,6 +93,7 @@ The following is the `aicfg.yaml` used in this repository:
 
 ```yaml
 src_dir: src
+src_hooks_file: hooks.yaml
 
 platforms:
   # Claude Code — canonical platform
@@ -114,11 +114,6 @@ platforms:
         suffix: .md
     drop_fields:
       - applyTo
-    hooks:
-      src_hooks_file: hooks.yaml
-      hooks_file: .claude/hooks.yaml
-      src_context_dir: src/context
-      context_dir: .claude/context
 
   # GitHub Copilot
   github:
