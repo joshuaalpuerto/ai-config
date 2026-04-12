@@ -150,3 +150,13 @@ PostToolUse:
 ```
 
 For the full reference — modes, matchers, path patterns, inject actions, rule precedence, and settings — see [docs/hooks.md](docs/hooks.md).
+
+## When to use rules vs skills vs hook context injection
+
+| Mechanism | When loaded | Use for |
+|-----------|-------------|---------|
+| **Rules** | On `Read` tool matching the rule's path | Repo-wide standards, contribution guidelines, architectural decisions |
+| **Skills** | Description always in context; full body loads anywhere in the reasoning loop when the AI matches the task | Step-by-step workflows, domain procedures, reusable processes tied to a type of task |
+| **Hook context injection** | Every matching `tool × path` — unconditional, no AI judgment | Standards that must apply when writing/editing specific files — especially new files the AI hasn't read yet, and non-negotiable policies, `PostToolUse` side-effects |
+
+**The key difference:** Rules and skills depend on the AI deciding to load them. Hook injection fires unconditionally — use it when correct behavior cannot rely on the AI having encountered the instruction earlier in the session.
