@@ -5,7 +5,6 @@
   "description": "Frontmatter schema for source files under src/rules/.",
   "type": "object",
   "required": [],
-  "additionalProperties": false,
   "properties": {
     "description": { "type": "string" },
     "paths": {
@@ -20,7 +19,6 @@
   "$defs": {
     "RuleOverride": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "description": { "type": "string" },
         "applyTo":     { "type": "string" },

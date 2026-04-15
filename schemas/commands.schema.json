@@ -5,7 +5,6 @@
   "description": "Frontmatter schema for source files under src/commands/.",
   "type": "object",
   "required": ["description"],
-  "additionalProperties": false,
   "properties": {
     "description": { "type": "string" },
     "argument-hint": { "type": "string" },
@@ -22,7 +21,6 @@
   "$defs": {
     "CommandOverride": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "description": { "type": "string" },
         "tools": {
