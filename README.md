@@ -127,7 +127,7 @@ Platform-specific behaviour is controlled through `overrides.<platform>.<field>`
 
 ## Hooks (`hooks.yaml`)
 
-Hook rules enforce policies on every AI action — blocking dangerous commands, injecting context, or running validators. Define them in `hooks.yaml` at the repo root:
+Hook rules enforce policies on every AI action — blocking dangerous commands, deterministically injecting context, or running side-effect scripts. Define them in `hooks.yaml` at the repo root:
 
 ```yaml
 version: "1"
@@ -151,12 +151,94 @@ PostToolUse:
 
 For the full reference — modes, matchers, path patterns, inject actions, rule precedence, and settings — see [docs/hooks.md](docs/hooks.md).
 
+## Context injection via hooks
+
+Context injection is the primary reason to use hooks. It delivers instructions to the AI **unconditionally** — no AI judgment, no prior file read required.
+
+### Why rules alone are not enough
+
+Claude rules (`.claude/rules/`) and `CLAUDE.md` files are loaded by the `Read` tool. This creates a critical gap:
+
+- **New file creation** — when the AI writes a file that does not yet exist, no `Read` event fires first. The rule is never loaded, so coding standards and architectural constraints are silently skipped.
+- **Subdirectory rules** — there are [known issues](https://github.com/anthropics/claude-code/issues/23478) where Claude does not reliably read rules in subdirectories, meaning instructions scoped to `src/` or deeper may never reach the model.
+- **Skills are probabilistic** — a skill may not be loaded if the AI does not judge the task as matching its description, particularly for less common workflows.
+
+Hook injection sidesteps all of this by firing at the tool-call level, not the file-read level.
+
+### Primary use cases
+
+**1. Inject standards before writing a new file**
+
+The most impactful use. When the AI creates a file that does not exist yet, there is nothing to read — rules cannot load. A `PreToolUse` hook on the `Write` tool fires before the file is written, injecting any standards the AI needs:
+
+```yaml
+PreToolUse:
+  - match:
+      tools: ["Write"]
+      paths: ["*.ts", "*.tsx"]
+    action:
+      inject: "./src/context/typescript-standards.md"
+
+  - match:
+      tools: ["Write"]
+      paths: ["**/src/api/**"]
+    action:
+      inject: "./src/context/api-design-guidelines.md"
+```
+
+**2. Enforce non-negotiable policies unconditionally**
+
+Policies that cannot rely on the AI remembering a rule it may or may not have read earlier in the session:
+
+```yaml
+PreToolUse:
+  - match:
+      tools: ["Write", "Edit"]
+      paths: ["*.go"]
+    action:
+      inject_inline: |
+        All Go code must handle every returned error explicitly.
+        Never use _ to discard errors from external packages.
+```
+
+**3. Deterministic `PostToolUse` side-effects**
+
+Run formatters, linters, or validators unconditionally after specific file types are written — regardless of what the AI did or did not read:
+
+```yaml
+PostToolUse:
+  - match:
+      tools: ["Write", "Edit"]
+      paths: ["*.go"]
+    action:
+      run_inline: "cd backend && go fmt ./..."
+
+  - match:
+      tools: ["Write", "Edit"]
+      paths: ["*.ts", "*.tsx", "*.js", "*.jsx"]
+    action:
+      run: "./scripts/lint-check.sh"
+```
+
+**4. Guard against creating files without a plan**
+
+When the AI creates a new file opportunistically (no blueprint or prior context), inject a reminder to follow the established structure. This covers the gap where a skill would normally provide this guidance but was not loaded:
+
+```yaml
+PreToolUse:
+  - match:
+      tools: ["Write"]
+      paths: ["**/components/**/*.tsx"]
+    action:
+      inject: "./src/context/component-authoring-guide.md"
+```
+
 ## When to use rules vs skills vs hook context injection
 
-| Mechanism | When loaded | Use for |
+| Mechanism | When loaded | Best for |
 |-----------|-------------|---------|
-| **Rules** | On `Read` tool matching the rule's path | Repo-wide standards, contribution guidelines, architectural decisions |
-| **Skills** | Description always in context; full body loads anywhere in the reasoning loop when the AI matches the task | Step-by-step workflows, domain procedures, reusable processes tied to a type of task |
-| **Hook context injection** | Every matching `tool × path` — unconditional, no AI judgment | Standards that must apply when writing/editing specific files — especially new files the AI hasn't read yet, and non-negotiable policies, `PostToolUse` side-effects |
+| **Rules** | When AI reads a file whose path matches the rule's `applyTo` glob | Repo-wide standards and guidelines the AI will encounter while reading existing files |
+| **Skills** | Description always in context; full body loaded when the AI judges the task matches | Step-by-step workflows and reusable domain procedures |
+| **Hook context injection** | Every matching `tool × path` — unconditional, no AI judgment needed | Any standard that must apply when **writing** files, new files the AI hasn't read yet, non-negotiable constraints, and `PostToolUse` side-effects |
 
-**The key difference:** Rules and skills depend on the AI deciding to load them. Hook injection fires unconditionally — use it when correct behavior cannot rely on the AI having encountered the instruction earlier in the session.
+**The key difference:** Rules and skills depend on the AI deciding to load them. Hook injection fires unconditionally — use it when correct behaviour cannot rely on the AI having encountered the instruction earlier in the session.
