@@ -42,7 +42,7 @@ func FormatContext(r *AnalysisResult) string {
 	}
 	if len(treeFiles) > 0 {
 		fmt.Fprintf(&b, "## Structure\n")
-		fmt.Fprint(&b, renderFileTree(treeFiles))
+		fmt.Fprint(&b, renderFileTree(treeFiles, false))
 		fmt.Fprintln(&b)
 	}
 
@@ -90,9 +90,9 @@ type treeNode struct {
 }
 
 // renderFileTree builds and renders a hierarchical file tree from repo-relative paths.
-// Directories with more than 20 direct children are collapsed when total files > 100.
-func renderFileTree(files []string) string {
-	collapse := len(files) > 100
+// When collapse is true, directories with more than 20 child files are summarised as
+// "dir/ (N files)" rather than being fully expanded.
+func renderFileTree(files []string, collapse bool) string {
 
 	// Build tree structure.
 	root := &treeNode{children: make(map[string]*treeNode)}
@@ -113,6 +113,7 @@ func renderFileTree(files []string) string {
 
 	var b strings.Builder
 	renderNode(&b, root, "", collapse)
+
 	return b.String()
 }
 
