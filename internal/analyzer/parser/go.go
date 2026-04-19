@@ -13,6 +13,7 @@ import (
 // GoParser parses Go source files using go/ast.
 type GoParser struct {
 	modulePath string // e.g. "github.com/foo/bar"
+	moduleDir  string // repo-relative dir containing go.mod, e.g. "backend" (empty = repo root)
 	repoRoot   string
 }
 
@@ -34,8 +35,13 @@ func (p *GoParser) Parse(path string) (Result, error) {
 		raw := strings.Trim(imp.Path.Value, `"`)
 		if p.modulePath != "" && strings.HasPrefix(raw, p.modulePath) {
 			// Strip module prefix and convert to repo-relative path.
+			// Prepend moduleDir so the result is relative to the repo root, not
+			// the directory that contains go.mod.
 			rel := strings.TrimPrefix(raw, p.modulePath)
 			rel = strings.TrimPrefix(rel, "/")
+			if p.moduleDir != "" && p.moduleDir != "." {
+				rel = p.moduleDir + "/" + rel
+			}
 			rel = filepath.ToSlash(filepath.Clean(rel))
 			imports = append(imports, rel)
 		}

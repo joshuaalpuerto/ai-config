@@ -23,10 +23,11 @@ var srcExtensions = map[string]bool{
 // scanResult holds the output of the filesystem scan phase.
 type scanResult struct {
 	TechStack   TechStack
-	SourceFiles []string          // absolute paths
+	SourceFiles []string // absolute paths
 	Domains     []string
 	TSAliases   map[string]string // alias prefix → repo-relative dir
 	ModulePath  string            // Go module path, if any
+	GoModDir    string            // repo-relative dir containing go.mod, e.g. "backend"
 	SourceRoot  string            // absolute path to source root
 }
 
@@ -59,6 +60,9 @@ func scan(root string) (scanResult, error) {
 			langSet["go"] = true
 			if mod, err := parseGoMod(path); err == nil {
 				res.ModulePath = mod
+				if rel, err := filepath.Rel(root, filepath.Dir(path)); err == nil {
+					res.GoModDir = filepath.ToSlash(rel)
+				}
 			}
 		case "package.json":
 			langSet["js/ts"] = true
@@ -250,8 +254,8 @@ func parsePythonDeps(path string) ([]string, error) {
 // tsconfigPaths is a minimal representation of tsconfig.json for alias extraction.
 type tsconfigPaths struct {
 	CompilerOptions struct {
-		Paths     map[string][]string `json:"paths"`
-		BaseURL   string              `json:"baseUrl"`
+		Paths   map[string][]string `json:"paths"`
+		BaseURL string              `json:"baseUrl"`
 	} `json:"compilerOptions"`
 }
 

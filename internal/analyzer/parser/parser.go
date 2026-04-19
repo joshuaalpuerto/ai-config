@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -22,6 +23,9 @@ type LanguageParser interface {
 type Config struct {
 	// ModulePath is the Go module path from go.mod (e.g. "github.com/foo/bar").
 	ModulePath string
+	// ModuleDir is the repo-relative directory containing go.mod (e.g. "backend").
+	// Empty string means go.mod is at the repo root.
+	ModuleDir string
 	// TSAliases maps an alias prefix (e.g. "@/") to a repo-relative directory (e.g. "src/").
 	TSAliases map[string]string
 	// RepoRoot is the absolute path to the repository root.
@@ -33,7 +37,7 @@ func For(path string, cfg Config) LanguageParser {
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {
 	case ".go":
-		return &GoParser{modulePath: cfg.ModulePath, repoRoot: cfg.RepoRoot}
+		return &GoParser{modulePath: cfg.ModulePath, moduleDir: cfg.ModuleDir, repoRoot: cfg.RepoRoot}
 	case ".ts", ".tsx", ".js", ".jsx":
 		return &JSParser{aliases: cfg.TSAliases, repoRoot: cfg.RepoRoot, filePath: path}
 	case ".py":
@@ -73,6 +77,9 @@ func resolveRelative(importPath, importingFile, repoRoot string) string {
 		joined + "/index.js",
 	}
 	for _, c := range candidates {
+		if _, err := os.Stat(c); err != nil {
+			continue // file does not exist on disk
+		}
 		rel, err := filepath.Rel(repoRoot, c)
 		if err != nil {
 			continue

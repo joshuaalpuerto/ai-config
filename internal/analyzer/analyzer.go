@@ -34,6 +34,7 @@ func (a *Analyzer) Analyze(root string) (*AnalysisResult, error) {
 	// Phase 2 + 3: parse imports and build graph.
 	cfg := parser.Config{
 		ModulePath: scan.ModulePath,
+		ModuleDir:  scan.GoModDir,
 		TSAliases:  scan.TSAliases,
 		RepoRoot:   root,
 	}
