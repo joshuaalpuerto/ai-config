@@ -214,6 +214,9 @@ func runHooks(hooksFilePath, platform string, platformToolMap map[string]string)
 func analyzeCmd() *cobra.Command {
 	var outputPath string
 	var since string
+	var format string
+	var verbose bool
+	var cache bool
 
 	cmd := &cobra.Command{
 		Use:   "analyze <directory>",
@@ -224,29 +227,40 @@ func analyzeCmd() *cobra.Command {
 
 			a := analyzer.New()
 			a.Since = since
+			a.Verbose = verbose
+			a.Cache = cache
 
 			result, err := a.Analyze(root)
 			if err != nil {
 				return fmt.Errorf("analyze: %w", err)
 			}
 
-			data, err := json.MarshalIndent(result, "", "  ")
-			if err != nil {
-				return fmt.Errorf("marshaling result: %w", err)
+			var out []byte
+			switch format {
+			case "context":
+				out = []byte(analyzer.FormatContext(result))
+			default:
+				out, err = json.MarshalIndent(result, "", "  ")
+				if err != nil {
+					return fmt.Errorf("marshaling result: %w", err)
+				}
 			}
 
 			if outputPath != "" {
-				if err := os.WriteFile(outputPath, data, 0o644); err != nil {
+				if err := os.WriteFile(outputPath, out, 0o644); err != nil {
 					return fmt.Errorf("writing output file: %w", err)
 				}
 			} else {
-				fmt.Println(string(data))
+				fmt.Println(string(out))
 			}
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(&outputPath, "output", "", "write JSON report to this file (default: stdout)")
+	cmd.Flags().StringVar(&outputPath, "output", "", "write report to this file (default: stdout)")
 	cmd.Flags().StringVar(&since, "since", "6 months ago", "git history window for churn analysis")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json or context (LLM-ready markdown)")
+	cmd.Flags().BoolVar(&verbose, "verbose", false, "include full per-file metrics in JSON output")
+	cmd.Flags().BoolVar(&cache, "cache", false, "cache result in .aicfg-cache.json; reuse on unchanged codebases")
 	return cmd
 }

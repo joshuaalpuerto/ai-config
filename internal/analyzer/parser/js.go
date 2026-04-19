@@ -3,10 +3,20 @@ package parser
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/js"
+)
+
+var (
+	// jsExportDecl matches: export function Foo, export class Bar, export const Baz, etc.
+	jsExportDecl = regexp.MustCompile(`(?m)^export\s+(?:async\s+)?(?:function\*?|class|const|let|var|enum|type|interface|abstract\s+class)\s+(\w+)`)
+	// jsExportBraces matches: export { foo, bar as baz }
+	jsExportBraces = regexp.MustCompile(`(?m)^export\s*\{([^}]+)\}`)
+	// jsExportDefaultNamed matches: export default function Foo / export default class Foo
+	jsExportDefaultNamed = regexp.MustCompile(`(?m)^export\s+default\s+(?:async\s+)?(?:function\*?|class)\s+(\w+)`)
 )
 
 // JSParser parses JS/TS source files using tdewolff/parse.
@@ -54,9 +64,12 @@ func (p *JSParser) Parse(path string) (Result, error) {
 		}
 	}
 
+	exportNames := extractJSExportNames(string(src))
+
 	return Result{
 		Imports:     dedupeStrings(resolved),
 		ExportCount: exportCount,
+		ExportNames: exportNames,
 		Lines:       countLines(string(src)),
 	}, nil
 }
@@ -84,4 +97,38 @@ func (p *JSParser) resolve(raw, importingFile string) string {
 
 	// Not a local import — external package, skip.
 	return ""
+}
+
+// extractJSExportNames extracts exported symbol names from JS/TS source text.
+func extractJSExportNames(src string) []string {
+	seen := make(map[string]bool)
+	var names []string
+
+	add := func(name string) {
+		name = strings.TrimSpace(name)
+		if name != "" && !seen[name] {
+			seen[name] = true
+			names = append(names, name)
+		}
+	}
+
+	// export function Foo / export class Bar / export const Baz etc.
+	for _, m := range jsExportDecl.FindAllStringSubmatch(src, -1) {
+		add(m[1])
+	}
+	// export default function Foo / export default class Bar
+	for _, m := range jsExportDefaultNamed.FindAllStringSubmatch(src, -1) {
+		add(m[1])
+	}
+	// export { foo, bar as baz } — capture original names before "as"
+	for _, m := range jsExportBraces.FindAllStringSubmatch(src, -1) {
+		for _, item := range strings.Split(m[1], ",") {
+			parts := strings.Fields(item)
+			if len(parts) > 0 {
+				add(parts[0])
+			}
+		}
+	}
+
+	return names
 }

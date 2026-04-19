@@ -48,42 +48,44 @@ func (p *GoParser) Parse(path string) (Result, error) {
 		// External imports are silently dropped.
 	}
 
-	exportCount := countGoExports(f)
+	exportCount, exportNames := countGoExports(f)
 
 	return Result{
 		Imports:     dedupeStrings(imports),
 		ExportCount: exportCount,
+		ExportNames: exportNames,
 		Lines:       countLines(string(src)),
 	}, nil
 }
 
-// countGoExports counts top-level exported declarations (uppercase first char).
-func countGoExports(f *ast.File) int {
-	count := 0
+// countGoExports counts top-level exported declarations (uppercase first char)
+// and returns both the count and the list of exported symbol names.
+func countGoExports(f *ast.File) (int, []string) {
+	var names []string
 	for _, decl := range f.Decls {
 		switch d := decl.(type) {
 		case *ast.FuncDecl:
 			if d.Name != nil && isExported(d.Name.Name) {
-				count++
+				names = append(names, d.Name.Name)
 			}
 		case *ast.GenDecl:
 			for _, spec := range d.Specs {
 				switch s := spec.(type) {
 				case *ast.TypeSpec:
 					if isExported(s.Name.Name) {
-						count++
+						names = append(names, s.Name.Name)
 					}
 				case *ast.ValueSpec:
 					for _, name := range s.Names {
 						if isExported(name.Name) {
-							count++
+							names = append(names, name.Name)
 						}
 					}
 				}
 			}
 		}
 	}
-	return count
+	return len(names), names
 }
 
 func isExported(name string) bool {

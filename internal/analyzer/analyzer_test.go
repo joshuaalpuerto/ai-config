@@ -72,6 +72,7 @@ func TestAnalyze_DetectsGoLanguage(t *testing.T) {
 func TestAnalyze_GraphEdges(t *testing.T) {
 	root := makeGoRepo(t)
 	a := analyzer.New()
+	a.Verbose = true // Files map is only populated in verbose mode
 	result, err := a.Analyze(root)
 	if err != nil {
 		t.Fatalf("Analyze: %v", err)

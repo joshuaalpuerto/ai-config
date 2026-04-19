@@ -11,6 +11,7 @@ import (
 type Result struct {
 	Imports     []string // raw import paths as written in the file
 	ExportCount int
+	ExportNames []string // names of top-level exported symbols
 	Lines       int
 }
 

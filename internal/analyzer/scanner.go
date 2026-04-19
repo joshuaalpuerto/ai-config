@@ -22,13 +22,14 @@ var srcExtensions = map[string]bool{
 
 // scanResult holds the output of the filesystem scan phase.
 type scanResult struct {
-	TechStack   TechStack
-	SourceFiles []string // absolute paths
-	Domains     []string
-	TSAliases   map[string]string // alias prefix → repo-relative dir
-	ModulePath  string            // Go module path, if any
-	GoModDir    string            // repo-relative dir containing go.mod, e.g. "backend"
-	SourceRoot  string            // absolute path to source root
+	TechStack      TechStack
+	SourceFiles    []string // absolute paths
+	TopLevelDirs   []string
+	TSAliases      map[string]string // alias prefix → repo-relative dir
+	ModulePath     string            // Go module path, if any
+	GoModDir       string            // repo-relative dir containing go.mod, e.g. "backend"
+	SourceRoot     string            // absolute path to source root
+	SourceRootName string            // bare name of source root dir (e.g. "src"), empty if root itself
 }
 
 // scan walks root and collects tech stack info, source files, and domain labels.
@@ -105,15 +106,21 @@ func scan(root string) (scanResult, error) {
 	}
 
 	res.SourceRoot = detectSourceRoot(root)
-	res.Domains = discoverDomains(res.SourceRoot, root)
+	res.TopLevelDirs = discoverTopLevelDirs(res.SourceRoot, root)
+	res.SourceRootName = detectSourceRootName(res.SourceRoot, root)
 
 	return res, nil
+}
+
+// knownSourceRoots are directory names that indicate the source root.
+var knownSourceRoots = map[string]bool{
+	"src": true, "app": true, "lib": true, "server": true,
 }
 
 // detectSourceRoot returns the first of src/, app/, lib/, server/ found at top level,
 // or root itself as fallback.
 func detectSourceRoot(root string) string {
-	for _, name := range []string{"src", "app", "lib", "server"} {
+	for name := range knownSourceRoots {
 		candidate := filepath.Join(root, name)
 		if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
 			return candidate
@@ -122,15 +129,24 @@ func detectSourceRoot(root string) string {
 	return root
 }
 
-// discoverDomains returns the names of top-level directories inside sourceRoot
-// that contain at least one source file (not in skipDirs).
-func discoverDomains(sourceRoot, repoRoot string) []string {
+// detectSourceRootName returns the bare directory name of the source root relative to
+// root (e.g. "src"), or an empty string when the source root is root itself.
+func detectSourceRootName(sourceRoot, root string) string {
+	if sourceRoot == root {
+		return ""
+	}
+	return filepath.Base(sourceRoot)
+}
+
+// discoverTopLevelDirs returns the repo-relative paths of top-level directories
+// inside sourceRoot that contain at least one source file (skipping boilerplate dirs).
+func discoverTopLevelDirs(sourceRoot, repoRoot string) []string {
 	entries, err := os.ReadDir(sourceRoot)
 	if err != nil {
 		return nil
 	}
 
-	domainSet := make(map[string]bool)
+	dirSet := make(map[string]bool)
 	for _, e := range entries {
 		if !e.IsDir() || skipDirs[e.Name()] {
 			continue
@@ -141,15 +157,15 @@ func discoverDomains(sourceRoot, repoRoot string) []string {
 			if err != nil {
 				rel = e.Name()
 			}
-			domainSet[filepath.ToSlash(rel)] = true
+			dirSet[filepath.ToSlash(rel)] = true
 		}
 	}
 
-	domains := make([]string, 0, len(domainSet))
-	for d := range domainSet {
-		domains = append(domains, d)
+	dirs := make([]string, 0, len(dirSet))
+	for d := range dirSet {
+		dirs = append(dirs, d)
 	}
-	return domains
+	return dirs
 }
 
 // dirHasSourceFile returns true if dir or any subdirectory contains a source file.

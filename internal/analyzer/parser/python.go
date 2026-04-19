@@ -10,6 +10,8 @@ import (
 var (
 	pyFromImport  = regexp.MustCompile(`(?m)^from\s+(\.+[\w.]*|[\w.]+)\s+import\s+`)
 	pyPlainImport = regexp.MustCompile(`(?m)^import\s+([\w.]+)`)
+	// pyPublicDef matches top-level def/class without a leading underscore.
+	pyPublicDef = regexp.MustCompile(`(?m)^(?:def|class)\s+([A-Za-z][A-Za-z0-9_]*)`)
 )
 
 // PythonParser parses Python source files using regex.
@@ -46,9 +48,15 @@ func (p *PythonParser) Parse(path string) (Result, error) {
 		}
 	}
 
+	var exportNames []string
+	for _, m := range pyPublicDef.FindAllStringSubmatch(content, -1) {
+		exportNames = append(exportNames, m[1])
+	}
+
 	return Result{
 		Imports:     dedupeStrings(resolved),
-		ExportCount: 0, // Python has no explicit export mechanism
+		ExportCount: len(exportNames),
+		ExportNames: exportNames,
 		Lines:       countLines(content),
 	}, nil
 }

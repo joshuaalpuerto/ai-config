@@ -15,6 +15,7 @@ type graphNode struct {
 	importedBy   []string
 	lines        int
 	exportCount  int
+	exportNames  []string
 	churn        int
 	isEntryPoint bool
 	folderDepth  int
@@ -47,6 +48,7 @@ func buildGraph(files []string, cfg parser.Config) (map[string]*graphNode, error
 			imports:     res.Imports,
 			lines:       res.Lines,
 			exportCount: res.ExportCount,
+			exportNames: res.ExportNames,
 			folderDepth: strings.Count(rel, "/"),
 		}
 	}
@@ -108,8 +110,7 @@ func computePriorities(nodes map[string]*graphNode) {
 			entryBonus = 10.0
 		}
 
-		_ = fanOut // fanOut is stored but not used in priority formula
-		node.priority = (fanIn * 3.0) + (exports * 1.5) + entryBonus + (churn * 2.0) + (1.0 / (depth + 1))
+		node.priority = (fanIn * 3.0) + (exports * 1.5) + entryBonus + (churn * 2.0) + (fanOut * 0.5) + (1.0 / (depth + 1))
 	}
 }
 
@@ -131,10 +132,11 @@ func topHubs(nodes map[string]*graphNode, n int) []Hub {
 	hubs := make([]Hub, 0, len(all))
 	for _, r := range all {
 		hubs = append(hubs, Hub{
-			Path:     r.node.path,
-			FanIn:    len(r.node.importedBy),
-			FanOut:   len(r.node.imports),
-			Priority: r.node.priority,
+			Path:        r.node.path,
+			FanIn:       len(r.node.importedBy),
+			FanOut:      len(r.node.imports),
+			Priority:    r.node.priority,
+			ExportNames: r.node.exportNames,
 		})
 	}
 	return hubs
@@ -188,6 +190,7 @@ func nodesToFileMap(nodes map[string]*graphNode) map[string]FileNode {
 			ImportedBy:   importedBy,
 			Lines:        n.lines,
 			ExportCount:  n.exportCount,
+			ExportNames:  n.exportNames,
 			Churn:        n.churn,
 			FanIn:        len(n.importedBy),
 			FanOut:       len(n.imports),

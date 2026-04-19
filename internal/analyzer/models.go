@@ -4,15 +4,15 @@ import "time"
 
 // AnalysisResult is the top-level output of the analyzer.
 type AnalysisResult struct {
-	Root              string             `json:"root"`
-	AnalyzedAt        time.Time          `json:"analyzedAt"`
-	GitChurnAvailable bool               `json:"gitChurnAvailable"`
-	TechStack         TechStack          `json:"techStack"`
-	Domains           []string           `json:"domains"`
-	Hubs              []Hub              `json:"hubs"`
-	Hotspots          []Hotspot          `json:"hotspots"`
-	Clusters          []Cluster          `json:"clusters"`
-	Files             map[string]FileNode `json:"files"`
+	Root              string              `json:"root"`
+	AnalyzedAt        time.Time           `json:"analyzedAt"`
+	GitChurnAvailable bool                `json:"gitChurnAvailable"`
+	TechStack         TechStack           `json:"techStack"`
+	TopLevelDirs      []string            `json:"topLevelDirs"`
+	Hubs              []Hub               `json:"hubs"`
+	Hotspots          []Hotspot           `json:"hotspots"`
+	Clusters          []Cluster           `json:"clusters"`
+	Files             map[string]FileNode `json:"files,omitempty"`
 }
 
 // TechStack describes the detected languages and frameworks.
@@ -27,6 +27,7 @@ type FileNode struct {
 	ImportedBy   []string `json:"importedBy"`
 	Lines        int      `json:"lines"`
 	ExportCount  int      `json:"exportCount"`
+	ExportNames  []string `json:"exportNames,omitempty"`
 	Churn        int      `json:"churn"`
 	FanIn        int      `json:"fanIn"`
 	FanOut       int      `json:"fanOut"`
@@ -37,10 +38,11 @@ type FileNode struct {
 
 // Hub is a high-priority file in the import graph.
 type Hub struct {
-	Path     string  `json:"path"`
-	FanIn    int     `json:"fanIn"`
-	FanOut   int     `json:"fanOut"`
-	Priority float64 `json:"priority"`
+	Path        string   `json:"path"`
+	FanIn       int      `json:"fanIn"`
+	FanOut      int      `json:"fanOut"`
+	Priority    float64  `json:"priority"`
+	ExportNames []string `json:"exportNames,omitempty"`
 }
 
 // Hotspot is a file with high git churn relative to its size.
@@ -56,5 +58,6 @@ type Cluster struct {
 	Label     string   `json:"label"`
 	Size      int      `json:"size"`
 	Singleton bool     `json:"singleton,omitempty"`
+	DependsOn []string `json:"dependsOn,omitempty"` // labels of clusters this cluster imports from
 	Files     []string `json:"files"`
 }
