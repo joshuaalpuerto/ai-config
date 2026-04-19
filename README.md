@@ -87,13 +87,48 @@ make install    # Build and install the aicfg binary
 make build      # Transpile all src/ files to platform outputs
 make clean      # Remove all generated files
 make validate   # Validate source file frontmatter
+make analyze    # Statically analyze a codebase and output a JSON report
 make watch      # Rebuild on changes (requires fswatch)
 ```
 
-The `aicfg` binary also exposes a `hooks` subcommand used at runtime by Claude Code:
+The `aicfg` binary also exposes subcommands used at runtime:
 
 ```bash
 aicfg hooks     # Evaluate a PreToolUse hook event from stdin
+```
+
+### `aicfg analyze`
+
+Statically analyzes a codebase and outputs a JSON report. Useful for understanding module structure, dependency graphs, and file churn.
+
+```bash
+aicfg analyze <directory> [flags]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `<directory>` | Path to the codebase root to analyze (required) |
+
+**Flags:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--output <file>` | stdout | Write the JSON report to a file instead of stdout |
+| `--since <duration>` | `6 months ago` | Git history window used for churn analysis |
+
+**Examples:**
+
+```bash
+# Print report to stdout
+aicfg analyze .
+
+# Write report to a file
+aicfg analyze . --output report.json
+
+# Analyze with a custom git history window
+aicfg analyze . --since "1 year ago" --output report.json
 ```
 
 ## Custom source directory

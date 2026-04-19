@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/joshuaalpuerto/ai-config/internal/analyzer"
 	"github.com/joshuaalpuerto/ai-config/internal/cleaner"
 	"github.com/joshuaalpuerto/ai-config/internal/config"
 	"github.com/joshuaalpuerto/ai-config/internal/hooks"
@@ -40,6 +41,7 @@ func main() {
 		validateCmd(opts),
 		cleanCmd(opts),
 		hooksCmd(opts),
+		analyzeCmd(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -207,4 +209,44 @@ func runHooks(hooksFilePath, platform string, platformToolMap map[string]string)
 	os.Exit(exitCode)
 
 	return nil
+}
+
+func analyzeCmd() *cobra.Command {
+	var outputPath string
+	var since string
+
+	cmd := &cobra.Command{
+		Use:   "analyze <directory>",
+		Short: "Statically analyze a codebase and output a JSON report",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root := args[0]
+
+			a := analyzer.New()
+			a.Since = since
+
+			result, err := a.Analyze(root)
+			if err != nil {
+				return fmt.Errorf("analyze: %w", err)
+			}
+
+			data, err := json.MarshalIndent(result, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling result: %w", err)
+			}
+
+			if outputPath != "" {
+				if err := os.WriteFile(outputPath, data, 0o644); err != nil {
+					return fmt.Errorf("writing output file: %w", err)
+				}
+			} else {
+				fmt.Println(string(data))
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&outputPath, "output", "", "write JSON report to this file (default: stdout)")
+	cmd.Flags().StringVar(&since, "since", "6 months ago", "git history window for churn analysis")
+	return cmd
 }
