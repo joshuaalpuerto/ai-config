@@ -23,7 +23,8 @@ var srcExtensions = map[string]bool{
 // scanResult holds the output of the filesystem scan phase.
 type scanResult struct {
 	TechStack      TechStack
-	SourceFiles    []string // absolute paths
+	SourceFiles    []string // absolute paths of source files (used for graph analysis)
+	AllFiles       []string // absolute paths of all files (used for file tree)
 	TopLevelDirs   []string
 	TSAliases      map[string]string // alias prefix → repo-relative dir
 	ModulePath     string            // Go module path, if any
@@ -87,7 +88,10 @@ func scan(root string) (scanResult, error) {
 			}
 		}
 
-		// Collect source files.
+		// Collect all files for the file tree.
+		res.AllFiles = append(res.AllFiles, path)
+
+		// Collect source files (graph analysis only).
 		ext := strings.ToLower(filepath.Ext(name))
 		if srcExtensions[ext] {
 			res.SourceFiles = append(res.SourceFiles, path)

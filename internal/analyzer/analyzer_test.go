@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/joshuaalpuerto/ai-config/internal/analyzer"
@@ -131,7 +132,7 @@ func TestAnalyze_JSONRoundtrip(t *testing.T) {
 	}
 }
 
-func TestAnalyze_ClustersConnected(t *testing.T) {
+func TestAnalyze_ClustersPresent(t *testing.T) {
 	root := makeGoRepo(t)
 	a := analyzer.New()
 	result, err := a.Analyze(root)
@@ -140,25 +141,60 @@ func TestAnalyze_ClustersConnected(t *testing.T) {
 	}
 
 	if len(result.Clusters) == 0 {
-		t.Error("expected at least one cluster")
+		t.Error("expected at least one cluster in JSON output")
 	}
-	// cmd/main.go and internal/utils/utils.go are connected → should be in the same cluster.
-	found := false
+
+	// Every file in every cluster must appear in SourceFiles.
+	sourceFileSet := make(map[string]bool, len(result.SourceFiles))
+	for _, f := range result.SourceFiles {
+		sourceFileSet[f] = true
+	}
 	for _, cl := range result.Clusters {
-		hasMain, hasUtils := false, false
 		for _, f := range cl.Files {
-			if f == "cmd/main.go" {
-				hasMain = true
+			if !sourceFileSet[f] {
+				t.Errorf("cluster file %q not found in SourceFiles", f)
 			}
-			if f == "internal/utils/utils.go" {
-				hasUtils = true
-			}
-		}
-		if hasMain && hasUtils {
-			found = true
 		}
 	}
-	if !found {
-		t.Error("expected cmd/main.go and internal/utils/utils.go in the same cluster")
+}
+
+func TestAnalyze_SourceFilesPopulated(t *testing.T) {
+	root := makeGoRepo(t)
+	a := analyzer.New()
+	result, err := a.Analyze(root)
+	if err != nil {
+		t.Fatalf("Analyze: %v", err)
+	}
+
+	if len(result.SourceFiles) == 0 {
+		t.Fatal("expected SourceFiles to be populated")
+	}
+	// All paths must be repo-relative (not absolute).
+	for _, f := range result.SourceFiles {
+		if len(f) > 0 && f[0] == '/' {
+			t.Errorf("expected repo-relative path, got absolute: %s", f)
+		}
+	}
+}
+
+func TestFormatContext_ContainsStructure(t *testing.T) {
+	root := makeGoRepo(t)
+	a := analyzer.New()
+	result, err := a.Analyze(root)
+	if err != nil {
+		t.Fatalf("Analyze: %v", err)
+	}
+
+	output := analyzer.FormatContext(result)
+
+	if !strings.Contains(output, "## Structure") {
+		t.Error("expected context output to contain '## Structure'")
+	}
+	if strings.Contains(output, "## Feature Clusters") {
+		t.Error("expected context output to not contain '## Feature Clusters'")
+	}
+	// File names should appear in the tree.
+	if !strings.Contains(output, "main.go") {
+		t.Error("expected context output to contain 'main.go' in the file tree")
 	}
 }

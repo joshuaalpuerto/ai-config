@@ -89,6 +89,8 @@ func (a *Analyzer) Analyze(root string) (*AnalysisResult, error) {
 		GitChurnAvailable: churn.available,
 		TechStack:         scan.TechStack,
 		TopLevelDirs:      scan.TopLevelDirs,
+		SourceFiles:       repoRelativePaths(root, scan.SourceFiles),
+		AllFiles:          repoRelativePaths(root, scan.AllFiles),
 		Hubs:              topHubs(nodes, a.HubsN),
 		Hotspots:          topHotspots(nodes, a.HotspotsN),
 		Clusters:          clusters,
@@ -152,4 +154,18 @@ func (a *Analyzer) writeCache(root, fingerprint string, result *AnalysisResult) 
 	}
 	path := filepath.Join(root, cacheFileName)
 	_ = os.WriteFile(path, data, 0o644)
+}
+
+// repoRelativePaths converts a slice of absolute file paths to repo-relative slash paths.
+// Paths that are already relative are returned as-is.
+func repoRelativePaths(root string, paths []string) []string {
+	rel := make([]string, 0, len(paths))
+	for _, p := range paths {
+		if r, err := filepath.Rel(root, p); err == nil {
+			rel = append(rel, filepath.ToSlash(r))
+		} else {
+			rel = append(rel, filepath.ToSlash(p))
+		}
+	}
+	return rel
 }

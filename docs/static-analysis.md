@@ -102,6 +102,7 @@ Treats the import graph as undirected and finds all connected components via BFS
     "frameworks": []
   },
   "topLevelDirs": ["cmd", "internal", "docs"],
+  "sourceFiles": [...],
   "hubs": [...],
   "hotspots": [...],
   "clusters": [...],
@@ -118,6 +119,7 @@ Treats the import graph as undirected and finds all connected components via BFS
 | `gitChurnAvailable` | `bool` | Whether git history was accessible; `false` means hotspot data is absent |
 | `techStack` | `object` | Detected languages and frameworks |
 | `topLevelDirs` | `string[]` | Top-level source directories found (used to orient reading the report) |
+| `sourceFiles` | `string[]` | All analyzed source file paths, repo-relative |
 | `hubs` | `Hub[]` | Most structurally important files, sorted by priority descending |
 | `hotspots` | `Hotspot[]` | Most frequently changed large files, sorted by churn×lines descending |
 | `clusters` | `Cluster[]` | Logical feature groups, sorted by size descending |
@@ -273,22 +275,28 @@ When `--format context` is used, the analyzer emits a compact markdown summary i
 
 **Source folders:** cmd, internal, src
 
+## Structure
+cmd/
+  aicfg/
+    main.go
+internal/
+  billing/
+    invoice.go
+    subscription.go
+  db/
+    db.go
+src/
+  api/
+    payment-webhook.ts
+
 ## Hub Files (most depended-on)
 1. `internal/lib/db.go` — imported by 14 files. Exports: Connect, Query, Close
 2. `internal/middleware/auth.go` — imported by 9 files. Exports: Authenticate, RequireRole
-
-## Feature Clusters
-- **billing** (12 files) → depends on: auth, db
-- **auth** (8 files) → depends on: db
-- **db** (3 files)
-- **misc** (5 isolated files)
 
 ## Hotspots (high churn + size)
 - `src/api/payment-webhook.ts` — changed 18x, 320 lines
 - `internal/billing/invoice.go` — changed 11x, 210 lines
 ```
-
-Typical output is under 300 tokens, making it suitable as a system prompt prefix.
 
 ---
 

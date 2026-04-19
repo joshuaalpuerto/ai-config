@@ -9,7 +9,7 @@ import (
 
 // FormatContext renders an AnalysisResult as a compact markdown summary suitable for
 // use as LLM context. The output describes the codebase structure without reading any
-// source files — typically under 300 tokens for most codebases.
+// source files.
 func FormatContext(r *AnalysisResult) string {
 	var b strings.Builder
 
@@ -35,6 +35,17 @@ func FormatContext(r *AnalysisResult) string {
 		fmt.Fprintf(&b, "**Source folders:** %s\n\n", strings.Join(sorted, ", "))
 	}
 
+	// File tree structure — use AllFiles for a complete snapshot; fall back to SourceFiles.
+	treeFiles := r.AllFiles
+	if len(treeFiles) == 0 {
+		treeFiles = r.SourceFiles
+	}
+	if len(treeFiles) > 0 {
+		fmt.Fprintf(&b, "## Structure\n")
+		fmt.Fprint(&b, renderFileTree(treeFiles))
+		fmt.Fprintln(&b)
+	}
+
 	// Hub files
 	if len(r.Hubs) > 0 {
 		fmt.Fprintf(&b, "## Hub Files (most depended-on)\n")
@@ -55,31 +66,6 @@ func FormatContext(r *AnalysisResult) string {
 		fmt.Fprintln(&b)
 	}
 
-	// Feature clusters (non-singleton only; singletons collapsed into misc count)
-	nonSingletons := make([]Cluster, 0, len(r.Clusters))
-	singletonCount := 0
-	for _, c := range r.Clusters {
-		if c.Singleton {
-			singletonCount++
-		} else {
-			nonSingletons = append(nonSingletons, c)
-		}
-	}
-	if len(nonSingletons) > 0 {
-		fmt.Fprintf(&b, "## Feature Clusters\n")
-		for _, c := range nonSingletons {
-			line := fmt.Sprintf("- **%s** (%d files)", c.Label, c.Size)
-			if len(c.DependsOn) > 0 {
-				line += fmt.Sprintf(" → depends on: %s", strings.Join(c.DependsOn, ", "))
-			}
-			fmt.Fprintln(&b, line)
-		}
-		if singletonCount > 0 {
-			fmt.Fprintf(&b, "- **misc** (%d isolated files)\n", singletonCount)
-		}
-		fmt.Fprintln(&b)
-	}
-
 	// Hotspots
 	if len(r.Hotspots) > 0 {
 		fmt.Fprintf(&b, "## Hotspots (high churn + size)\n")
@@ -95,4 +81,83 @@ func FormatContext(r *AnalysisResult) string {
 	}
 
 	return strings.TrimRight(b.String(), "\n")
+}
+
+// treeNode represents a directory or file in the rendered tree.
+type treeNode struct {
+	name     string
+	children map[string]*treeNode // nil for file nodes
+}
+
+// renderFileTree builds and renders a hierarchical file tree from repo-relative paths.
+// Directories with more than 20 direct children are collapsed when total files > 100.
+func renderFileTree(files []string) string {
+	collapse := len(files) > 100
+
+	// Build tree structure.
+	root := &treeNode{children: make(map[string]*treeNode)}
+	for _, f := range files {
+		parts := strings.Split(f, "/")
+		node := root
+		for i, part := range parts {
+			if _, ok := node.children[part]; !ok {
+				n := &treeNode{name: part}
+				if i < len(parts)-1 {
+					n.children = make(map[string]*treeNode)
+				}
+				node.children[part] = n
+			}
+			node = node.children[part]
+		}
+	}
+
+	var b strings.Builder
+	renderNode(&b, root, "", collapse)
+	return b.String()
+}
+
+// renderNode recursively renders a treeNode with two-space indentation.
+func renderNode(b *strings.Builder, node *treeNode, indent string, collapse bool) {
+	if node.children == nil {
+		return
+	}
+
+	// Separate dirs and files, sort each group.
+	var dirs, fileNames []string
+	for name, child := range node.children {
+		if child.children != nil {
+			dirs = append(dirs, name)
+		} else {
+			fileNames = append(fileNames, name)
+		}
+	}
+	sort.Strings(dirs)
+	sort.Strings(fileNames)
+
+	// Render dirs first, then files.
+	for _, name := range dirs {
+		child := node.children[name]
+		childFileCount := countFiles(child)
+		if collapse && childFileCount > 20 {
+			fmt.Fprintf(b, "%s%s/ (%d files)\n", indent, name, childFileCount)
+		} else {
+			fmt.Fprintf(b, "%s%s/\n", indent, name)
+			renderNode(b, child, indent+"  ", collapse)
+		}
+	}
+	for _, name := range fileNames {
+		fmt.Fprintf(b, "%s%s\n", indent, name)
+	}
+}
+
+// countFiles returns the total number of file (leaf) nodes under a treeNode.
+func countFiles(node *treeNode) int {
+	if node.children == nil {
+		return 1
+	}
+	count := 0
+	for _, child := range node.children {
+		count += countFiles(child)
+	}
+	return count
 }

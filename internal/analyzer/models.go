@@ -9,6 +9,8 @@ type AnalysisResult struct {
 	GitChurnAvailable bool                `json:"gitChurnAvailable"`
 	TechStack         TechStack           `json:"techStack"`
 	TopLevelDirs      []string            `json:"topLevelDirs"`
+	SourceFiles       []string            `json:"sourceFiles,omitempty"` // source file paths used for graph analysis, repo-relative
+	AllFiles          []string            `json:"allFiles,omitempty"`    // all file paths in the repo, repo-relative
 	Hubs              []Hub               `json:"hubs"`
 	Hotspots          []Hotspot           `json:"hotspots"`
 	Clusters          []Cluster           `json:"clusters"`
