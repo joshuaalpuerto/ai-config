@@ -22,11 +22,15 @@ type Analyzer struct {
 	Verbose bool
 	// Cache enables reading/writing a cache file to avoid re-analysis on unchanged codebases.
 	Cache bool
+	// HubsN controls how many hub files are included in the report (default 10).
+	HubsN int
+	// HotspotsN controls how many hotspot files are included in the report (default 20).
+	HotspotsN int
 }
 
 // New returns an Analyzer with default settings.
 func New() *Analyzer {
-	return &Analyzer{Since: "6 months ago"}
+	return &Analyzer{Since: "6 months ago", HubsN: 10, HotspotsN: 20}
 }
 
 // cacheEnvelope wraps an AnalysisResult with a fingerprint for cache validation.
@@ -85,8 +89,8 @@ func (a *Analyzer) Analyze(root string) (*AnalysisResult, error) {
 		GitChurnAvailable: churn.available,
 		TechStack:         scan.TechStack,
 		TopLevelDirs:      scan.TopLevelDirs,
-		Hubs:              topHubs(nodes, 10),
-		Hotspots:          topHotspots(nodes, 10),
+		Hubs:              topHubs(nodes, a.HubsN),
+		Hotspots:          topHotspots(nodes, a.HotspotsN),
 		Clusters:          clusters,
 	}
 

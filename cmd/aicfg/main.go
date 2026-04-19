@@ -217,6 +217,8 @@ func analyzeCmd() *cobra.Command {
 	var format string
 	var verbose bool
 	var cache bool
+	var hubsN int
+	var hotspotsN int
 
 	cmd := &cobra.Command{
 		Use:   "analyze <directory>",
@@ -229,6 +231,12 @@ func analyzeCmd() *cobra.Command {
 			a.Since = since
 			a.Verbose = verbose
 			a.Cache = cache
+			if hubsN > 0 {
+				a.HubsN = hubsN
+			}
+			if hotspotsN > 0 {
+				a.HotspotsN = hotspotsN
+			}
 
 			result, err := a.Analyze(root)
 			if err != nil {
@@ -262,5 +270,7 @@ func analyzeCmd() *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", "json", "output format: json or context (LLM-ready markdown)")
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "include full per-file metrics in JSON output")
 	cmd.Flags().BoolVar(&cache, "cache", false, "cache result in .aicfg-cache.json; reuse on unchanged codebases")
+	cmd.Flags().IntVar(&hubsN, "hubs", 0, "number of hub files to include in the report (default 10)")
+	cmd.Flags().IntVar(&hotspotsN, "hotspots", 0, "number of hotspot files to include in the report (default 10)")
 	return cmd
 }
