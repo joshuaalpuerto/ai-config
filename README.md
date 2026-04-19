@@ -87,7 +87,6 @@ make install    # Build and install the aicfg binary
 make build      # Transpile all src/ files to platform outputs
 make clean      # Remove all generated files
 make validate   # Validate source file frontmatter
-make analyze    # Statically analyze a codebase and output a JSON report
 make watch      # Rebuild on changes (requires fswatch)
 ```
 
