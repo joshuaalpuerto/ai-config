@@ -90,23 +90,24 @@ func TranspileType(
 
 	outDir := filepath.Join(targetRoot, typeCfg.Path)
 
-	// Collect .md files sorted for deterministic output order.
-	var mdFiles []string
+	// Collect all files sorted for deterministic output order.
+	var allFiles []string
 	err = filepath.WalkDir(typeDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if !d.IsDir() && strings.HasSuffix(path, ".md") {
-			mdFiles = append(mdFiles, path)
+		if !d.IsDir() {
+			allFiles = append(allFiles, path)
 		}
 		return nil
 	})
 	if err != nil {
 		return 0, fmt.Errorf("walking %s: %w", typeDir, err)
 	}
-	sort.Strings(mdFiles)
+	sort.Strings(allFiles)
 
-	for _, srcFile := range mdFiles {
+	count := 0
+	for _, srcFile := range allFiles {
 		relPath, err := filepath.Rel(typeDir, srcFile)
 		if err != nil {
 			return 0, err
@@ -116,19 +117,32 @@ func TranspileType(
 			return 0, fmt.Errorf("creating output directory: %w", err)
 		}
 
-		if strings.Contains(relPath, string(filepath.Separator)) {
-			// Subdirectory file — preserve relative path, no suffix.
-			if err := TranspileSubdirFile(srcFile, relPath, platform, typeName, typeCfg, platCfg, toolMap, outDir); err != nil {
-				return 0, err
+		if typeName == "skills" {
+			// Skills are organised as subdirectories (one per skill).
+			// SKILL.md is the entry point and has its frontmatter transpiled;
+			// all other files in the skill folder are copied verbatim.
+			if filepath.Base(srcFile) == "SKILL.md" {
+				if err := TranspileSubdirFile(srcFile, relPath, platform, typeName, typeCfg, platCfg, toolMap, outDir); err != nil {
+					return 0, err
+				}
+			} else {
+				if err := copyFile(srcFile, filepath.Join(outDir, relPath)); err != nil {
+					return 0, err
+				}
 			}
 		} else {
+			// All other types only process top-level .md files.
+			if !strings.HasSuffix(srcFile, ".md") {
+				continue
+			}
 			if err := TranspileFile(srcFile, platform, typeName, typeCfg, platCfg, toolMap, outDir); err != nil {
 				return 0, err
 			}
 		}
+		count++
 	}
 
-	return len(mdFiles), nil
+	return count, nil
 }
 
 // TranspileAll runs all platforms × all types.
