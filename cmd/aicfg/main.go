@@ -222,7 +222,7 @@ func analyzeCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "analyze <directory>",
-		Short: "Statically analyze a codebase and output a JSON report",
+		Short: "Statically analyze a codebase and output a report",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root := args[0]
@@ -245,7 +245,7 @@ func analyzeCmd() *cobra.Command {
 
 			var out []byte
 			switch format {
-			case "context":
+			case "md":
 				out = []byte(analyzer.FormatContext(result))
 			default:
 				out, err = json.MarshalIndent(result, "", "  ")
@@ -255,7 +255,8 @@ func analyzeCmd() *cobra.Command {
 			}
 
 			if outputPath != "" {
-				if err := os.WriteFile(outputPath, out, 0o644); err != nil {
+				dest := outputPath + "." + format
+				if err := os.WriteFile(dest, out, 0o644); err != nil {
 					return fmt.Errorf("writing output file: %w", err)
 				}
 			} else {
@@ -265,9 +266,9 @@ func analyzeCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&outputPath, "output", "", "write report to this file (default: stdout)")
+	cmd.Flags().StringVar(&outputPath, "output", "", "write report to this file without extension (default: stdout)")
 	cmd.Flags().StringVar(&since, "since", "6 months ago", "git history window for churn analysis")
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json or context (LLM-ready markdown)")
+	cmd.Flags().StringVar(&format, "format", "md", "output format: md (default) or json")
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "include full per-file metrics in JSON output")
 	cmd.Flags().BoolVar(&cache, "cache", false, "cache result in .aicfg-cache.json; reuse on unchanged codebases")
 	cmd.Flags().IntVar(&hubsN, "hubs", 0, "number of hub files to include in the report (default 10)")

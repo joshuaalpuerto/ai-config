@@ -14,8 +14,8 @@ aicfg analyze <directory> [flags]
 
 | Flag | Default | Description |
 |---|---|---|
-| `--format` | `json` | Output format: `json` (machine-readable) or `context` (LLM-ready markdown) |
-| `--output` | stdout | Write the report to a file instead of printing it |
+| `--format` | `md` | Output format: `md` (LLM-ready markdown, default) or `json` (machine-readable) |
+| `--output` | stdout | Write the report to a file (without extension) — the extension is appended automatically based on `--format` |
 | `--since` | `6 months ago` | Git history window used for churn analysis |
 | `--hubs` | `10` | Number of hub files to include in the report |
 | `--hotspots` | `20` | Number of hotspot files to include in the report |
@@ -25,14 +25,14 @@ aicfg analyze <directory> [flags]
 ### Examples
 
 ```bash
-# Analyze the current directory and print JSON to stdout
+# Analyze the current directory and print markdown to stdout (default)
 aicfg analyze .
 
-# Analyze a specific repo and save the report
-aicfg analyze ~/projects/myapp --output report.json
+# Analyze a specific repo and save the report as reports.md
+aicfg analyze ~/projects/myapp --output reports
 
-# Get LLM-ready markdown summary
-aicfg analyze . --format context
+# Save the report as JSON
+aicfg analyze ~/projects/myapp --output reports --format json
 
 # Expand the git history window and show more hotspots
 aicfg analyze . --since "1 year ago" --hotspots 30
@@ -90,7 +90,7 @@ Treats the import graph as undirected and finds all connected components via BFS
 
 ## Output Reference
 
-### JSON output (default)
+### JSON output (`--format json`)
 
 ```jsonc
 {
@@ -263,9 +263,9 @@ Where `entryBonus` is `10.0` for recognized entry points and `0` otherwise.
 
 ---
 
-## Context Format (`--format context`)
+## Markdown Format (`--format md`, default)
 
-When `--format context` is used, the analyzer emits a compact markdown summary instead of JSON. This is designed to be pasted directly into an LLM prompt as codebase context.
+When `--format md` is used (or by default), the analyzer emits a compact markdown summary instead of JSON. This is designed to be pasted directly into an LLM prompt as codebase context.
 
 ```markdown
 ## Codebase: myapp
