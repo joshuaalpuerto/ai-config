@@ -15,6 +15,11 @@ PreToolUse:
       paths: ["**/src/api/**", "**/routes/**"]
     action:
       inject: "./src/context/api-design-guidelines.md"
+  - match:
+      tools: ["Write"]
+      paths: ["*.go"]
+    action:
+      inject_inline: "You mush add `howdy go developer` on top of the file."
 
 # Event: After a tool completes successfully
 PostToolUse:
