@@ -30,6 +30,19 @@
       "items": { "type": "string" },
       "uniqueItems": true
     },
+    "doc_audit": {
+      "type": "object",
+      "description": "Configuration for 'aicfg docaudit'. When present, overrides auto-detection of documentation roots.",
+      "additionalProperties": false,
+      "properties": {
+        "paths": {
+          "type": "array",
+          "description": "Files and directories (relative to the analyzed directory) to treat as documentation when auditing for gaps. Overrides the default auto-detection of docs/ and README.md.",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        }
+      }
+    },
     "tool_map": {
       "type": "object",
       "description": "Maps canonical tool names to platform-specific equivalents. Omit a tool to drop it for that platform.",

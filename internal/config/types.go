@@ -21,11 +21,17 @@ type PlatformsConfig map[string]PlatformConfig
 // Shape: map[platform]map[canonicalTool]mappedTool
 type ToolMap map[string]map[string]string
 
+// DocAuditConfig holds configuration for the docaudit subcommand.
+type DocAuditConfig struct {
+	Paths []string `yaml:"paths,omitempty"`
+}
+
 // AicfgConfig is the top-level structure of aicfg.yaml.
 type AicfgConfig struct {
 	SrcDir         string          `yaml:"src_dir"`
 	SrcHooksFile   string          `yaml:"src_hooks_file,omitempty"`
 	AnalyzeExclude []string        `yaml:"analyze_exclude,omitempty"`
+	DocAudit       DocAuditConfig  `yaml:"doc_audit,omitempty"`
 	Platforms      PlatformsConfig `yaml:"platforms"`
 	ToolMap        ToolMap         `yaml:"tool_map"`
 }
