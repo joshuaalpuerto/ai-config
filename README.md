@@ -130,6 +130,8 @@ aicfg analyze . --output report.json
 aicfg analyze . --since "1 year ago" --output report.json
 ```
 
+Paths can be excluded from analysis via `analyze_exclude` in `aicfg.yaml`. See [docs/aicfg-config.md](docs/aicfg-config.md#analyze_exclude) for details. For the full flag reference see [docs/static-analysis.md](docs/static-analysis.md).
+
 ## Custom source directory
 
 By default the build reads from `src/` in the repo root. Change the `src_dir` field in `aicfg.yaml` to use a different path — absolute or relative to the repo root:

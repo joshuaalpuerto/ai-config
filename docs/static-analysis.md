@@ -51,6 +51,8 @@ The analyzer runs five sequential phases against the target directory.
 
 Detects languages and frameworks by reading well-known marker files (not file extensions or source content). Skips irrelevant directories entirely (`node_modules`, `vendor`, `dist`, `build`, `.git`, etc.).
 
+Additional paths can be excluded via `analyze_exclude` in `aicfg.yaml` — see [aicfg-config.md](aicfg-config.md#analyze_exclude) for pattern syntax and examples.
+
 **Supported marker files:**
 
 | File | Language | Framework signals parsed |

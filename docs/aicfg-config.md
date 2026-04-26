@@ -8,6 +8,7 @@
 |-------|----------|-------------|
 | `src_dir` | ✓ | Source directory. Relative to repo root or absolute. |
 | `src_hooks_file` | — | Path to the hooks definition file. Relative to repo root. |
+| `analyze_exclude` | — | Glob patterns for paths to exclude from `aicfg analyze`. |
 | `platforms` | ✓ | Output configuration keyed by platform name. |
 | `tool_map` | ✓ | Canonical tool name → platform-specific name mappings. |
 
@@ -30,6 +31,26 @@ src_hooks_file: hooks.yaml
 ```
 
 Points to the hooks definition file. Relative paths are resolved from the repo root. When set, the hooks engine reads rules from this file at runtime. If omitted, hook evaluation is skipped.
+
+---
+
+## `analyze_exclude`
+
+```yaml
+analyze_exclude:
+  - .claude
+  - .github
+  - docs/*.md
+```
+
+A list of gitignore-style glob patterns for paths to skip when running `aicfg analyze`. Patterns are matched against every file and directory encountered during the scan:
+
+- **Patterns without `/`** are matched against the entry name only (e.g. `.github` skips any directory named `.github` anywhere in the tree).
+- **Patterns with `/`** are matched against the path relative to the analyzed root (e.g. `docs/*.md` skips only markdown files directly inside `docs/`).
+
+Directories that match are skipped entirely (their contents are not walked). Files that match are excluded from both the file tree and source graph analysis.
+
+Always-excluded directories (hardcoded, not configurable): `.git`, `node_modules`, `vendor`, `dist`, `build`, `bin`, `__pycache__`, `.next`, `coverage`.
 
 ---
 
@@ -94,6 +115,9 @@ The following is the `aicfg.yaml` used in this repository:
 ```yaml
 src_dir: src
 src_hooks_file: hooks.yaml
+analyze_exclude:
+  - .claude
+  - .github
 
 platforms:
   # Claude Code — canonical platform
