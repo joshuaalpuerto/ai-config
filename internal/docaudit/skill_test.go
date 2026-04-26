@@ -60,8 +60,10 @@ func TestGenerateSkill_containsProcessSections(t *testing.T) {
 		"## Project Configuration",
 		"## Process",
 		"## Output Format",
-		"### Missing Docs",
-		"### Undocumented Key Files",
+		"### Contributor Blockers",
+		"### Undocumented Contracts",
+		"### Complexity Traps",
+		"### Undocumented Dependency Conventions",
 		"### Suggested Actions",
 	}
 	for _, section := range requiredSections {
