@@ -24,6 +24,12 @@
         "pattern": "^[a-z][a-z0-9_-]*$"
       }
     },
+    "analyze_exclude": {
+      "type": "array",
+      "description": "Gitignore-style glob patterns for paths to exclude from 'aicfg analyze'. Patterns without '/' match against the entry name (e.g. '.github'); patterns with '/' match against the path relative to the analyzed root.",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
     "tool_map": {
       "type": "object",
       "description": "Maps canonical tool names to platform-specific equivalents. Omit a tool to drop it for that platform.",

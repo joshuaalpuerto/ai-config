@@ -238,6 +238,11 @@ func analyzeCmd() *cobra.Command {
 				a.HotspotsN = hotspotsN
 			}
 
+			// Optionally load aicfg.yaml from the analyzed root to pick up analyze_exclude patterns.
+			if cfg, err := config.LoadConfig(filepath.Join(root, "aicfg.yaml")); err == nil {
+				a.ExcludePatterns = cfg.AnalyzeExclude
+			}
+
 			result, err := a.Analyze(root)
 			if err != nil {
 				return fmt.Errorf("analyze: %w", err)

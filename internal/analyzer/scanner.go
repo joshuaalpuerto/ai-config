@@ -33,8 +33,29 @@ type scanResult struct {
 	SourceRootName string            // bare name of source root dir (e.g. "src"), empty if root itself
 }
 
+// matchesExcludePattern reports whether an entry matches any of the provided
+// gitignore-style glob patterns. rel is the path relative to the scan root
+// (slash-separated); name is the bare entry name.
+//
+// Patterns without '/' are matched against name only.
+// Patterns with '/' are matched against rel.
+func matchesExcludePattern(rel, name string, patterns []string) bool {
+	for _, p := range patterns {
+		if strings.Contains(p, "/") {
+			if ok, _ := filepath.Match(filepath.FromSlash(p), filepath.FromSlash(rel)); ok {
+				return true
+			}
+		} else {
+			if ok, _ := filepath.Match(p, name); ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // scan walks root and collects tech stack info, source files, and domain labels.
-func scan(root string) (scanResult, error) {
+func scan(root string, excludePatterns []string) (scanResult, error) {
 	res := scanResult{
 		TSAliases: make(map[string]string),
 	}
@@ -47,10 +68,20 @@ func scan(root string) (scanResult, error) {
 			return nil // skip unreadable entries
 		}
 
+		rel, _ := filepath.Rel(root, path)
+		rel = filepath.ToSlash(rel)
+
 		if d.IsDir() {
 			if skipDirs[d.Name()] {
 				return filepath.SkipDir
 			}
+			if rel != "." && len(excludePatterns) > 0 && matchesExcludePattern(rel, d.Name(), excludePatterns) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		if len(excludePatterns) > 0 && matchesExcludePattern(rel, d.Name(), excludePatterns) {
 			return nil
 		}
 

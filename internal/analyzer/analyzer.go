@@ -26,6 +26,8 @@ type Analyzer struct {
 	HubsN int
 	// HotspotsN controls how many hotspot files are included in the report (default 20).
 	HotspotsN int
+	// ExcludePatterns holds gitignore-style glob patterns for paths to skip during scanning.
+	ExcludePatterns []string
 }
 
 // New returns an Analyzer with default settings.
@@ -47,7 +49,7 @@ func (a *Analyzer) Analyze(root string) (*AnalysisResult, error) {
 	}
 
 	// Phase 1: filesystem scan.
-	scan, err := scan(root)
+	scan, err := scan(root, a.ExcludePatterns)
 	if err != nil {
 		return nil, fmt.Errorf("scanning %s: %w", root, err)
 	}
