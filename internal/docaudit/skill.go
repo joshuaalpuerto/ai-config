@@ -168,7 +168,9 @@ For each hotspot: does its high churn and size suggest non-obvious complexity (o
 
 Using Task A's coverage map plus Task B's wrappers and Task C's patterns:
 
-For each doc in the corpus, check:
+> **Immutable-document rule:** ADRs, RFCs, design docs, postmortems, and migration guides are point-in-time records. **Never flag them as "Docs Needing Updates."** If an ADR/RFC describes a decision that current code has superseded, report it under **Superseded Records** (Step 5) — the only valid action is adding a status annotation (e.g. "Status: Superseded by ADR-XXX") at the top of the file. Detect these by path pattern (e.g. ` + "`ADR/`, `RFC/`, `adr-`, `rfc-`" + `) or by title/heading conventions.
+
+For each **mutable** doc in the corpus, check:
 
 1. Does the doc mention wrappers Task B identified for libraries it covers? If a wrapper exists and the doc covers the underlying library without naming the wrapper → **Doc Needs Update**.
 2. Does the doc's described pattern match what Task C found in actual usage? If the codebase has evolved a more specific convention → **Doc Needs Update**.
@@ -187,49 +189,137 @@ Output a report using the format below. Skip sections that have no findings rath
 
 ## Output Format
 
+Start with a summary block, then the detailed sections.
+
+### Summary
+
+A compact overview so the reader immediately knows the scope. Use this exact structure:
+
+` + "```" + `
+## Summary
+
+| Category | Count |
+|----------|-------|
+| Contributor Blockers | N |
+| Undocumented Contracts | N |
+| Complexity Traps | N |
+| Docs Needing Updates | N |
+| Superseded Records | N |
+| Undocumented Dependency Conventions | N |
+
+**Headline:** <one sentence describing the single most impactful gap>
+` + "```" + `
+
+---
+
 ### Contributor Blockers
-For each cluster where authoring conventions are undocumented:
-- Cluster name and the directly-editable files it contains
-- What a contributor would need to know to work there safely
-- Suggested doc file to create
-- One-line rationale
+
+Use this structure per finding:
+
+` + "```" + `
+#### <N>. <Cluster / directory name>
+
+| Field | Value |
+|-------|-------|
+| Files | <directly-editable files in this cluster> |
+| Gap | <what a contributor needs to know to work here safely — 1–2 sentences max> |
+| Suggested doc | <path to create> |
+| Rationale | <one line: what goes wrong without this> |
+` + "```" + `
+
+After the table, optionally include a bullet list of specific wrappers, components, or conventions (max 8 items) — one line each, no prose.
+
+---
 
 ### Undocumented Contracts
-For each hub file whose contract or format is not documented:
-- File path and the contract it defines
-- What a contributor must know in order to comply with it
-- Suggested target doc
-- One-line rationale
+
+` + "```" + `
+#### <N>. <file path>
+
+| Field | Value |
+|-------|-------|
+| Contract | <what it defines — interface, format, wiring sequence> |
+| Must-know | <the specific steps or rules contributors must follow — brief> |
+| Suggested target | <doc path to update or create> |
+| Rationale | <what breaks if ignored — one line> |
+` + "```" + `
+
+---
 
 ### Complexity Traps
-For each hotspot with non-obvious behavior and no guidance:
-- File path, churn count, and line count
-- The specific behavior, edge case, or pitfall that needs to be documented
-- Risk to a contributor making changes without that context
+
+` + "```" + `
+#### <N>. <file path> (<churn>× churn, <lines> lines)
+
+| Field | Value |
+|-------|-------|
+| Pitfall | <the non-obvious behavior, edge case, or ordering rule — 1–2 sentences> |
+| Risk | <what a contributor gets wrong without this context> |
+| Suggested target | <doc path> |
+` + "```" + `
+
+---
 
 ### Docs Needing Updates
-For each existing doc that is incomplete or misleading relative to actual code patterns:
-- Doc file path and the specific section that needs updating
-- What exists in code that the doc does not cover, with ` + "`file:line`" + ` reference
-- Freshness signal (last-updated date) when relevant
-- One-line rationale (what a contributor gets wrong by following the doc as-is)
+
+` + "```" + `
+#### <N>. <doc file path> (<age> days old)
+
+| Field | Value |
+|-------|-------|
+| Covers | <what the doc correctly describes — brief> |
+| Divergences | <bullet list of specific mismatches with file:line evidence> |
+| Omits | <what the doc should cover but doesn't> |
+| Rationale | <what a contributor gets wrong by following the doc as-is — one line> |
+` + "```" + `
+
+Keep each divergence to one line with a ` + "`file:line`" + ` reference. Use a bullet list, not a paragraph.
+
+---
+
+### Superseded Records
+
+` + "```" + `
+#### <N>. <file path>
+
+| Field | Value |
+|-------|-------|
+| Records | <the original decision — one line> |
+| Superseded by | <newer ADR/RFC number or current pattern> |
+| Evidence | <file:line showing the codebase no longer follows this decision> |
+| Suggested annotation | "Status: Superseded by <X>" |
+` + "```" + `
+
+Do NOT suggest content edits to ADRs/RFCs — only a status annotation at the top of the file.
+
+---
 
 ### Undocumented Dependency Conventions
-For each key library or framework with no documentation coverage (especially those with project wrappers):
-- Library name and the conventions it imposes on contributors
-- Project wrapper path (if any) — and whether the wrapper itself is documented
-- What a contributor would likely get wrong without guidance
-- Suggested target doc
+
+` + "```" + `
+#### <N>. <library name>
+
+| Field | Value |
+|-------|-------|
+| Convention | <what the library imposes on contributors — one line> |
+| Wrapper | <path> (documented: yes/no) |
+| Misuse risk | <what a contributor does wrong without guidance — one line> |
+| Suggested target | <doc path> |
+` + "```" + `
+
+---
 
 ### Suggested Actions
 
-A prioritized table of concrete actions. Each row must include the **type** and the **target surface**. Prioritize by contributor impact (which gaps are hit first and most often) then by blast radius (fan-in) and churn.
+A prioritized table grouped by effort. List quick wins first (` + "`annotate status`" + `), then updates, then new docs. Each row must include **type**, **effort**, and **target surface**.
 
-| # | Action | Type | Target surface | Rationale |
-|---|--------|------|----------------|-----------|
-| … | … | …  | … | … |
+| # | Action | Type | Effort | Target surface | Rationale |
+|---|--------|------|--------|----------------|-----------|
+| … | … | …  | … | … | … |
 
-**Type values:** ` + "`new doc`, `update doc`" + `.
+**Type values:** ` + "`new doc`, `update doc`, `annotate status`" + `.
+
+**Effort values:** ` + "`trivial`" + ` (< 5 min, e.g. adding a status line), ` + "`small`" + ` (< 30 min, e.g. fixing a section), ` + "`medium`" + ` (1–2 hours, e.g. writing a new focused guide), ` + "`large`" + ` (half day+, e.g. comprehensive new doc with examples).
 
 **Target surface values:** the path the change lands in (any path under the configured doc corpus, e.g. ` + "`docs/`, `README.md`, `.claude/rules/`, `.github/instructions/`, `CLAUDE.md`, `AGENTS.md`" + `).
 `
