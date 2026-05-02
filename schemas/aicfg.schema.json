@@ -37,7 +37,7 @@
       "properties": {
         "paths": {
           "type": "array",
-          "description": "Files and directories (relative to the analyzed directory) to treat as documentation when auditing for gaps. Overrides the default auto-detection of docs/ and README.md.",
+          "description": "Files and directories (relative to the analyzed directory) to treat as documentation when auditing for gaps. May include AI-assistance configuration paths (CLAUDE.md, AGENTS.md, .claude/, etc.). Overrides the default auto-detection of docs/ and README.md.",
           "items": { "type": "string" },
           "uniqueItems": true
         }

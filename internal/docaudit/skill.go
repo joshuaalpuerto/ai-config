@@ -8,55 +8,63 @@ import (
 
 // Config holds the project-specific settings baked into the generated skill.
 type Config struct {
-	TargetDir      string
-	ProjectName    string
-	DocRoots       []string
+	TargetDir   string
+	ProjectName string
+
+	// DocRoots is the documentation corpus to audit. Callers may include
+	// AI-assistance configuration paths (CLAUDE.md, AGENTS.md, .claude/,
+	// .github/instructions/, etc.) here to have them treated as docs.
+	DocRoots []string
+
+	// AnalyzeExclude is forwarded to readers as informational context.
 	AnalyzeExclude []string
 }
 
 const skillTemplate = `---
 name: doc-audit
-description: Audit {{.ProjectName}} for external documentation gaps
+description: Surface contributor-enablement gaps in {{.ProjectName}} — missing or stale docs and undocumented conventions that would prevent a new joiner (human or AI) from producing convention-adherent contributions immediately.
 allowed-tools:
   - Bash
   - Read
+  - Agent
 ---
 
 # Doc Audit: {{.ProjectName}}
 
-Surface documentation gaps that would block a new contributor — human or AI — from making correct changes to this codebase. The goal is not technical completeness; it is identifying where missing docs would cause someone to produce wrong, broken, or inconsistent output.
+Surface actionable items — new docs or doc updates — that would block a new contributor (human or AI) from producing convention-adherent contributions on day one. Treat any AI-assistance configuration listed in the doc corpus (e.g. ` + "`CLAUDE.md`, `AGENTS.md`, rules, skills, instructions" + `) as documentation for the purposes of this audit.
+
+The goal is not technical completeness. It is identifying where **missing or misleading guidance would cause someone to produce wrong, broken, or off-pattern output** — and proposing the smallest concrete artifact (a new doc or a doc update) that closes the gap.
 
 ## Project Configuration
 
 - **Target directory:** ` + "`{{.TargetDir}}`" + `
-- **Doc paths:** {{formatList .DocRoots}}
+- **Doc corpus:** {{formatList .DocRoots}}
 {{- if .AnalyzeExclude}}
 - **Analyze excludes:** {{formatList .AnalyzeExclude}}
 {{- end}}
 
 ## Process
 
-Follow these steps in order.
+Steps 1, 2, and 3 run in parallel. Wait for all three before starting Step 4.
 
-**Step 1 — Analyze the codebase**
+---
 
-Run the following commands and read the full output of each:
+### Step 1 — Run static analysis
+
+Run both commands and read the full output of each:
 
 ` + "```bash" + `
 aicfg analyze {{.TargetDir}}
 aicfg analyze {{.TargetDir}} --kind=doc
 ` + "```" + `
 
-The first command reports hub files, hotspots, and clusters — your primary inputs for the cross-reference in Step 3. The second command reports each documentation file's last-updated date and how many days have passed since it was changed. Use the staleness data to prioritize which docs to scrutinize most closely in Step 3 — docs that are oldest and cover hotspot or high-fan-in areas are the highest-risk gaps.
+The first reports hub files, hotspots, and clusters — your primary inputs for the cross-reference in Step 4. The second reports each doc file's last-updated date and how many days have passed; this is **input to Task A** (used to prioritize which docs get a deep read), not a standalone output.
 
-**Step 2 — Read existing documentation and dependency manifests**
+---
 
-Glob and read all files under the configured doc paths:
-{{range .DocRoots}}
-- ` + "`{{.}}`" + `
-{{- end}}
+### Step 2 — Read documentation and dependency manifests
 
-Then locate and read the dependency manifest for this project's language or package manager. The analyzer reports the tech stack at a high level; reading the manifest directly gives the full picture — specific libraries, versions, and combinations that deterministic detection cannot surface. Common manifests by ecosystem:
+Glob and read every file under the configured doc corpus. Then read the dependency manifest(s) for this project's ecosystem(s):
 
 | Ecosystem | Files to read |
 |-----------|---------------|
@@ -64,78 +72,166 @@ Then locate and read the dependency manifest for this project's language or pack
 | Go | ` + "`go.mod`" + ` |
 | Ruby | ` + "`Gemfile`" + ` |
 | Elixir | ` + "`mix.exs`" + ` |
-| Python | ` + "`requirements.txt`" + `, ` + "`pyproject.toml`" + `, ` + "`Pipfile`" + ` |
+| Python | ` + "`requirements.txt`, `pyproject.toml`, `Pipfile`" + ` |
 | Rust | ` + "`Cargo.toml`" + ` |
-| Java / Kotlin | ` + "`pom.xml`" + `, ` + "`build.gradle`" + ` |
+| Java / Kotlin | ` + "`pom.xml`, `build.gradle`" + ` |
 | PHP | ` + "`composer.json`" + ` |
-| .NET | ` + "`*.csproj`" + `, ` + "`*.fsproj`" + ` |
+| .NET | ` + "`*.csproj`, `*.fsproj`" + ` |
 
-Read whichever are present. For each dependency found, ask:
-- Does this library impose conventions a contributor must follow (e.g. routing patterns, state management rules, ORM query style, test structure)?
-- Are those conventions documented anywhere in the doc paths?
-- Does a combination of libraries carry an implicit architectural decision that is not made explicit in any doc?
+For each dependency, ask:
 
-If a key library has no corresponding documentation coverage, mark it as a **Undocumented Dependency Convention** in the gap report.
+- Does it impose conventions a contributor must follow (routing, state management, ORM style, test structure)?
+- Are those conventions documented anywhere in the doc corpus?
+- Does the project have a **wrapper or abstraction** around it? (See Task B.)
 
-**Step 3 — Cross-reference**
+> **Wrapper-precedence rule:** An undocumented project wrapper around a popular library is **more critical** than an undocumented raw library. Contributors will reach for the well-known library directly and silently bypass the team convention.
+
+---
+
+### Step 3 — Spawn parallel research tasks
+
+Spawn the three tasks below **concurrently** with Steps 1 and 2. Use whichever subagent the project provides for general-purpose codebase exploration (or the most specialized agent available for each task). Do **not** assume any specific agent name exists — pick the best available.
+
+Each task is independent. Each must return concrete findings with ` + "`file:line`" + ` references — not summaries.
+
+---
+
+#### Task A — Documentation coverage map
+
+**Input:** every file under the doc corpus, plus the staleness output from ` + "`aicfg analyze --kind=doc`" + `.
+
+**Goal:** for each doc file, return:
+
+1. **Claims:** which code-level entities the doc says it covers (libraries, components, hooks, patterns, workflows, services).
+2. **Omissions:** what a reader following this doc would *not* know that they need to know.
+3. **Freshness signal:** last-updated date and days-since-update from the staleness report.
+
+**Prioritization:** docs that are **older than ~90 days AND cover hub/hotspot areas** from Step 1 get a deeper comparison against current code. For these, include specific divergences with ` + "`file:line`" + ` evidence.
+
+**Return format (per doc):**
+` + "```" + `
+<path>: covers [<entities>]; omits [<entities>]; last-updated <date> (<n> days). Specific divergences: <file:line — what the doc says vs. what code does>.
+` + "```" + `
+
+Do not return raw doc content — only synthesized findings.
+
+---
+
+#### Task B — Project wrappers and convention discovery
+
+**Goal:** find **project-level abstractions** wrapping third-party dependencies — components wrapping a UI library, hooks wrapping a data-fetching library, helpers wrapping date/number/string libraries, façades over HTTP clients, generated-code adapters, etc.
+
+For each wrapper found, return:
+
+- Wrapper name and file path
+- The library it wraps
+- Approximate fan-in (how many feature files import it directly)
+- Whether contributors should always prefer the wrapper over the raw library (yes/no, with reason)
+- A short usage snippet with ` + "`file:line`" + ` reference
+
+Also surface **how key dependencies from the manifest are actually used** in the codebase — concrete code snippets with ` + "`file:line`" + ` references for the most-imported third-party libraries.
+
+---
+
+#### Task C — Pattern survey (medium thoroughness)
+
+**Goal:** survey conventions that static analysis cannot see. Spend effort proportional to project size on the following categories — adapt to what the project actually has:
+
+- **Test conventions:** fixtures, mocking strategy, test data factories, integration vs unit boundaries.
+- **DI / wiring patterns:** how new handlers, services, routes, or commands are registered.
+- **Configuration patterns:** how new env vars, feature flags, or external service configs are added.
+- **Error handling:** project-level error types, translation layers (e.g. domain → transport), user-facing vs internal errors.
+- **Code generation:** what is generated, from what source, and how to regenerate.
+- **Authorization / security:** how permissions are checked, where the contract for new permissions lives.
+
+Return concrete findings with ` + "`file:line`" + ` references. Skip categories that don't apply.
+
+---
+
+### Step 4 — Cross-reference
 
 The guiding question for every check: *"If a new contributor starts working in this area today, would they have enough context to make a correct change without breaking something?"*
 
-For each **cluster** in the analysis:
-- Does the cluster contain files that contributors directly author or edit (e.g. config files, input formats, rule definitions, source templates)?
-- If yes: is there a doc explaining the **authoring conventions** — what a valid file looks like, what fields are required, what common mistakes to avoid?
-- If not: mark it as **Contributor Blocker**
-- Skip clusters that are pure internal implementation with no contributor-facing interface
+#### 4a — Clusters (Contributor Blockers)
 
-For each **hub file** in the analysis:
-- Does it define a **contract, format, or interface** that contributors must follow? (e.g. a schema, a rule structure, a config format)
-- If yes: is that contract documented in accessible, actionable terms — not just as code comments?
-- If not: mark it as **Undocumented Contract**
+For each cluster from Step 1: does it contain files contributors directly author or edit? If yes and there is no doc explaining the authoring conventions → **Contributor Blocker**. Skip clusters that are pure internal implementation.
 
-For each **hotspot** in the analysis:
-- Does its high churn and size suggest **non-obvious complexity** — ordering rules, edge cases, platform differences, pitfalls?
-- If yes: is there a doc explaining the key behaviors or what to watch out for when making changes?
-- If not: mark it as a **Complexity Trap**
+#### 4b — Hub files (Undocumented Contracts)
 
-**Step 4 — Produce the gap report**
+For each hub file: does it define a contract, format, or interface contributors must follow? If yes and there is no accessible doc covering it → **Undocumented Contract**.
 
-Output a report using the format defined in the Output Format section below.
+#### 4c — Hotspots (Complexity Traps)
+
+For each hotspot: does its high churn and size suggest non-obvious complexity (ordering rules, edge cases, platform differences, pitfalls)? If yes and there is no guidance → **Complexity Trap**.
+
+#### 4d — Existing doc completeness (Docs Needing Updates)
+
+Using Task A's coverage map plus Task B's wrappers and Task C's patterns:
+
+For each doc in the corpus, check:
+
+1. Does the doc mention wrappers Task B identified for libraries it covers? If a wrapper exists and the doc covers the underlying library without naming the wrapper → **Doc Needs Update**.
+2. Does the doc's described pattern match what Task C found in actual usage? If the codebase has evolved a more specific convention → **Doc Needs Update**.
+3. Does the doc claim broad coverage in its title/intro but only address one narrow aspect? → **Doc Needs Update** (false-coverage docs are worse than missing docs).
+4. Use freshness signal as a tiebreaker: stale + hot = highest-confidence update target.
+
+#### 4e — Dependency conventions (Undocumented Dependency Conventions)
+
+For each key dependency from Step 2 with no corresponding doc coverage — and especially those with project wrappers from Task B — produce an **Undocumented Dependency Convention** entry.
+
+---
+
+### Step 5 — Produce the gap report
+
+Output a report using the format below. Skip sections that have no findings rather than emitting empty headers.
 
 ## Output Format
 
 ### Contributor Blockers
-
 For each cluster where authoring conventions are undocumented:
 - Cluster name and the directly-editable files it contains
 - What a contributor would need to know to work there safely
-- Suggested doc file to create (e.g. ` + "`docs/billing.md`" + `)
+- Suggested doc file to create
 - One-line rationale
 
 ### Undocumented Contracts
-
 For each hub file whose contract or format is not documented:
 - File path and the contract it defines
 - What a contributor must know in order to comply with it
-- Which doc file should cover it
+- Suggested target doc
 - One-line rationale
 
 ### Complexity Traps
-
 For each hotspot with non-obvious behavior and no guidance:
 - File path, churn count, and line count
 - The specific behavior, edge case, or pitfall that needs to be documented
 - Risk to a contributor making changes without that context
 
-### Undocumented Dependency Conventions
+### Docs Needing Updates
+For each existing doc that is incomplete or misleading relative to actual code patterns:
+- Doc file path and the specific section that needs updating
+- What exists in code that the doc does not cover, with ` + "`file:line`" + ` reference
+- Freshness signal (last-updated date) when relevant
+- One-line rationale (what a contributor gets wrong by following the doc as-is)
 
-For each key library or framework with no documentation coverage:
+### Undocumented Dependency Conventions
+For each key library or framework with no documentation coverage (especially those with project wrappers):
 - Library name and the conventions it imposes on contributors
+- Project wrapper path (if any) — and whether the wrapper itself is documented
 - What a contributor would likely get wrong without guidance
-- Suggested doc file to create or section to add
+- Suggested target doc
 
 ### Suggested Actions
 
-A prioritized list of specific, actionable documentation tasks. Prioritize by contributor impact — which gaps are hit first and most often — then by blast radius (fan-in) and churn.
+A prioritized table of concrete actions. Each row must include the **type** and the **target surface**. Prioritize by contributor impact (which gaps are hit first and most often) then by blast radius (fan-in) and churn.
+
+| # | Action | Type | Target surface | Rationale |
+|---|--------|------|----------------|-----------|
+| … | … | …  | … | … |
+
+**Type values:** ` + "`new doc`, `update doc`" + `.
+
+**Target surface values:** the path the change lands in (any path under the configured doc corpus, e.g. ` + "`docs/`, `README.md`, `.claude/rules/`, `.github/instructions/`, `CLAUDE.md`, `AGENTS.md`" + `).
 `
 
 var parsedTemplate = template.Must(template.New("skill").Funcs(template.FuncMap{

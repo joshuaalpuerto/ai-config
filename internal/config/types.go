@@ -23,6 +23,10 @@ type ToolMap map[string]map[string]string
 
 // DocAuditConfig holds configuration for the docaudit subcommand.
 type DocAuditConfig struct {
+	// Paths is the full documentation corpus to read during the audit.
+	// Callers may include AI-assistance configuration paths (CLAUDE.md,
+	// AGENTS.md, .claude/, .github/instructions/, etc.) to have them
+	// treated as in-scope docs.
 	Paths []string `yaml:"paths,omitempty"`
 }
 

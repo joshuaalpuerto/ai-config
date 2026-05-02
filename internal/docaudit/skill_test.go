@@ -14,14 +14,10 @@ func TestGenerateSkill_containsRequiredFrontmatter(t *testing.T) {
 		DocRoots:    []string{"docs/"},
 	})
 
-	if !strings.Contains(skill, "name: doc-audit") {
-		t.Error("expected skill to contain 'name: doc-audit'")
-	}
-	if !strings.Contains(skill, "description:") {
-		t.Error("expected skill to contain 'description:'")
-	}
-	if !strings.Contains(skill, "allowed-tools:") {
-		t.Error("expected skill to contain 'allowed-tools:'")
+	for _, want := range []string{"name: doc-audit", "description:", "allowed-tools:", "- Agent"} {
+		if !strings.Contains(skill, want) {
+			t.Errorf("expected skill frontmatter to contain %q", want)
+		}
 	}
 }
 
@@ -49,7 +45,7 @@ func TestGenerateSkill_embedsConfig(t *testing.T) {
 	}
 }
 
-func TestGenerateSkill_containsProcessSections(t *testing.T) {
+func TestGenerateSkill_containsCoreSections(t *testing.T) {
 	skill := docaudit.GenerateSkill(docaudit.Config{
 		TargetDir:   ".",
 		ProjectName: "testproject",
@@ -63,8 +59,13 @@ func TestGenerateSkill_containsProcessSections(t *testing.T) {
 		"### Contributor Blockers",
 		"### Undocumented Contracts",
 		"### Complexity Traps",
+		"### Docs Needing Updates",
 		"### Undocumented Dependency Conventions",
 		"### Suggested Actions",
+		"#### Task A",
+		"#### Task B",
+		"#### Task C",
+		"aicfg analyze --kind=doc",
 	}
 	for _, section := range requiredSections {
 		if !strings.Contains(skill, section) {

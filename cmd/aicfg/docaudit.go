@@ -19,7 +19,7 @@ func docauditCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "docaudit <directory>",
 		Short: "Generate a project-specific doc-audit skill",
-		Long:  "Reads the project's aicfg.yaml (if present) and writes a tailored SKILL.md that instructs Claude how to audit documentation gaps for that project.",
+		Long:  "Reads the project's aicfg.yaml (if present) and writes a tailored SKILL.md that instructs the AI how to audit contributor-enablement gaps for that project.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root := args[0]
