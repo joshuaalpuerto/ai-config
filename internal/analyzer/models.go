@@ -63,3 +63,20 @@ type Cluster struct {
 	DependsOn []string `json:"dependsOn,omitempty"` // labels of clusters this cluster imports from
 	Files     []string `json:"files"`
 }
+
+// DocAnalysisResult is the top-level output of the doc freshness analyzer.
+type DocAnalysisResult struct {
+	Root              string    `json:"root"`
+	AnalyzedAt        time.Time `json:"analyzedAt"`
+	GitChurnAvailable bool      `json:"gitChurnAvailable"`
+	DocRoots          []string  `json:"docRoots"`
+	DocFiles          []DocFile `json:"docFiles"`
+}
+
+// DocFile holds freshness metadata for a single documentation file.
+// DaysSinceUpdate is -1 when git history is unavailable or the file has no commits.
+type DocFile struct {
+	Path            string    `json:"path"`
+	LastUpdated     time.Time `json:"lastUpdated,omitempty"`
+	DaysSinceUpdate int       `json:"daysSinceUpdate"`
+}

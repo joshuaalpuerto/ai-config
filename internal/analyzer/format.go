@@ -162,3 +162,47 @@ func countFiles(node *treeNode) int {
 	}
 	return count
 }
+
+// FormatDocContext renders a DocAnalysisResult as a compact markdown summary
+// showing each documentation file's last-updated date and staleness.
+func FormatDocContext(r *DocAnalysisResult) string {
+	var b strings.Builder
+
+	name := filepath.Base(r.Root)
+	if name == "." || name == "" {
+		name = r.Root
+	}
+	fmt.Fprintf(&b, "## Doc Freshness: %s\n", name)
+	fmt.Fprintf(&b, "**Analyzed:** %s\n\n", r.AnalyzedAt.Format("2006-01-02"))
+
+	if len(r.DocRoots) > 0 {
+		fmt.Fprintf(&b, "**Doc roots:** %s\n\n", strings.Join(r.DocRoots, ", "))
+	}
+
+	if !r.GitChurnAvailable {
+		fmt.Fprintf(&b, "_Git history unavailable — last-updated data not shown._\n")
+		return strings.TrimRight(b.String(), "\n")
+	}
+
+	if len(r.DocFiles) == 0 {
+		fmt.Fprintf(&b, "_No documentation files found._\n")
+		return strings.TrimRight(b.String(), "\n")
+	}
+
+	fmt.Fprintf(&b, "| File | Last Updated | Days Since Update |\n")
+	fmt.Fprintf(&b, "|------|-------------|-------------------|\n")
+	for _, f := range r.DocFiles {
+		if f.DaysSinceUpdate < 0 {
+			fmt.Fprintf(&b, "| `%s` | unknown | — |\n", f.Path)
+		} else {
+			fmt.Fprintf(&b, "| `%s` | %s | %d |\n",
+				f.Path,
+				f.LastUpdated.Format("2006-01-02"),
+				f.DaysSinceUpdate,
+			)
+		}
+	}
+	fmt.Fprintln(&b)
+
+	return strings.TrimRight(b.String(), "\n")
+}

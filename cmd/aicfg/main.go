@@ -216,6 +216,7 @@ func analyzeCmd() *cobra.Command {
 	var outputPath string
 	var since string
 	var format string
+	var kind string
 	var verbose bool
 	var cache bool
 	var hubsN int
@@ -228,56 +229,116 @@ func analyzeCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root := args[0]
 
-			a := analyzer.New()
-			a.Since = since
-			a.Verbose = verbose
-			a.Cache = cache
-			if hubsN > 0 {
-				a.HubsN = hubsN
-			}
-			if hotspotsN > 0 {
-				a.HotspotsN = hotspotsN
-			}
-
-			// Optionally load aicfg.yaml from the analyzed root to pick up analyze_exclude patterns.
-			if cfg, err := config.LoadConfig(filepath.Join(root, "aicfg.yaml")); err == nil {
-				a.ExcludePatterns = cfg.AnalyzeExclude
-			}
-
-			result, err := a.Analyze(root)
+			abs, err := filepath.Abs(root)
 			if err != nil {
-				return fmt.Errorf("analyze: %w", err)
+				return fmt.Errorf("resolving directory: %w", err)
 			}
 
-			var out []byte
-			switch format {
-			case "md":
-				out = []byte(analyzer.FormatContext(result))
+			switch kind {
+			case "doc":
+				return runDocAnalysis(abs, format, outputPath)
+			case "code", "":
+				return runCodeAnalysis(abs, format, outputPath, since, verbose, cache, hubsN, hotspotsN)
 			default:
-				out, err = json.MarshalIndent(result, "", "  ")
-				if err != nil {
-					return fmt.Errorf("marshaling result: %w", err)
-				}
+				return fmt.Errorf("unknown --kind %q: must be \"code\" or \"doc\"", kind)
 			}
-
-			if outputPath != "" {
-				dest := outputPath + "." + format
-				if err := os.WriteFile(dest, out, 0o644); err != nil {
-					return fmt.Errorf("writing output file: %w", err)
-				}
-			} else {
-				fmt.Println(string(out))
-			}
-			return nil
 		},
 	}
 
 	cmd.Flags().StringVar(&outputPath, "output", "", "write report to this file without extension (default: stdout)")
 	cmd.Flags().StringVar(&since, "since", "6 months ago", "git history window for churn analysis")
 	cmd.Flags().StringVar(&format, "format", "md", "output format: md (default) or json")
+	cmd.Flags().StringVar(&kind, "kind", "code", "analysis kind: code (default) or doc")
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "include full per-file metrics in JSON output")
 	cmd.Flags().BoolVar(&cache, "cache", false, "cache result in .aicfg-cache.json; reuse on unchanged codebases")
 	cmd.Flags().IntVar(&hubsN, "hubs", 0, "number of hub files to include in the report (default 10)")
 	cmd.Flags().IntVar(&hotspotsN, "hotspots", 0, "number of hotspot files to include in the report (default 10)")
 	return cmd
+}
+
+func runCodeAnalysis(root, format, outputPath, since string, verbose, cache bool, hubsN, hotspotsN int) error {
+	a := analyzer.New()
+	a.Since = since
+	a.Verbose = verbose
+	a.Cache = cache
+	if hubsN > 0 {
+		a.HubsN = hubsN
+	}
+	if hotspotsN > 0 {
+		a.HotspotsN = hotspotsN
+	}
+
+	// Optionally load aicfg.yaml from the analyzed root to pick up analyze_exclude patterns.
+	if cfg, err := config.LoadConfig(filepath.Join(root, "aicfg.yaml")); err == nil {
+		a.ExcludePatterns = cfg.AnalyzeExclude
+	}
+
+	result, err := a.Analyze(root)
+	if err != nil {
+		return fmt.Errorf("analyze: %w", err)
+	}
+
+	var out []byte
+	switch format {
+	case "md":
+		out = []byte(analyzer.FormatContext(result))
+	default:
+		var jsonErr error
+		out, jsonErr = json.MarshalIndent(result, "", "  ")
+		if jsonErr != nil {
+			return fmt.Errorf("marshaling result: %w", jsonErr)
+		}
+	}
+
+	return writeOutput(out, outputPath, format)
+}
+
+func runDocAnalysis(root, format, outputPath string) error {
+	var docRoots []string
+
+	// Best-effort: load doc_audit.paths from aicfg.yaml.
+	if cfg, err := config.LoadConfig(filepath.Join(root, "aicfg.yaml")); err == nil {
+		docRoots = cfg.DocAudit.Paths
+	}
+
+	// Auto-detect doc roots when none are configured.
+	if len(docRoots) == 0 {
+		if info, err := os.Stat(filepath.Join(root, "docs")); err == nil && info.IsDir() {
+			docRoots = append(docRoots, "docs/")
+		}
+		if _, err := os.Stat(filepath.Join(root, "README.md")); err == nil {
+			docRoots = append(docRoots, "README.md")
+		}
+	}
+
+	result, err := analyzer.AnalyzeDocFreshness(root, docRoots)
+	if err != nil {
+		return fmt.Errorf("analyze doc: %w", err)
+	}
+
+	var out []byte
+	switch format {
+	case "md":
+		out = []byte(analyzer.FormatDocContext(result))
+	default:
+		var jsonErr error
+		out, jsonErr = json.MarshalIndent(result, "", "  ")
+		if jsonErr != nil {
+			return fmt.Errorf("marshaling result: %w", jsonErr)
+		}
+	}
+
+	return writeOutput(out, outputPath, format)
+}
+
+func writeOutput(out []byte, outputPath, format string) error {
+	if outputPath != "" {
+		dest := outputPath + "." + format
+		if err := os.WriteFile(dest, out, 0o644); err != nil {
+			return fmt.Errorf("writing output file: %w", err)
+		}
+		return nil
+	}
+	fmt.Println(string(out))
+	return nil
 }

@@ -40,13 +40,14 @@ Follow these steps in order.
 
 **Step 1 — Analyze the codebase**
 
-Run the following command and read the full output:
+Run the following commands and read the full output of each:
 
 ` + "```bash" + `
 aicfg analyze {{.TargetDir}}
+aicfg analyze {{.TargetDir}} --kind=doc
 ` + "```" + `
 
-The report contains hub files, hotspots, and clusters. These are your primary inputs for the cross-reference in Step 3.
+The first command reports hub files, hotspots, and clusters — your primary inputs for the cross-reference in Step 3. The second command reports each documentation file's last-updated date and how many days have passed since it was changed. Use the staleness data to prioritize which docs to scrutinize most closely in Step 3 — docs that are oldest and cover hotspot or high-fan-in areas are the highest-risk gaps.
 
 **Step 2 — Read existing documentation and dependency manifests**
 
