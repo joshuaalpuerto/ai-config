@@ -2,6 +2,9 @@
 
 src_dir: src
 src_hooks_file: hooks.yaml
+analyze_exclude:
+  - .claude
+  - .github
 
 platforms:
   # Claude Code — canonical platform, passthrough
