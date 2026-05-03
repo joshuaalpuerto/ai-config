@@ -1,53 +1,25 @@
 package analyzer
 
 import (
+	"path/filepath"
 	"sort"
 	"strings"
 )
 
-// buildClusters groups files into connected components using undirected BFS
-// over the import graph, then labels each cluster by its dominant top-level directory.
-// sourceRootName is the bare name of the source root (e.g. "src"), or "" if root itself.
+// buildClusters groups files by their package directory (depth-2 path segments) to
+// produce deterministic, meaningful clusters. It then uses the import graph to compute
+// inter-cluster dependencies. sourceRootName is the bare name of the source root
+// (e.g. "src"), or "" if root itself.
 func buildClusters(nodes map[string]*graphNode, sourceRootName string) []Cluster {
-	visited := make(map[string]bool, len(nodes))
+	// Group files by cluster key (directory path up to 2 segments deep).
+	groups := make(map[string][]string)
+	for path := range nodes {
+		key := clusterKey(path, sourceRootName)
+		groups[key] = append(groups[key], path)
+	}
+
 	var clusters []Cluster
-
-	for startPath := range nodes {
-		if visited[startPath] {
-			continue
-		}
-
-		// BFS from startPath treating edges as undirected.
-		queue := []string{startPath}
-		var members []string
-
-		for len(queue) > 0 {
-			path := queue[0]
-			queue = queue[1:]
-
-			if visited[path] {
-				continue
-			}
-			visited[path] = true
-			members = append(members, path)
-
-			node, ok := nodes[path]
-			if !ok {
-				continue
-			}
-			for _, imp := range node.imports {
-				if !visited[imp] {
-					queue = append(queue, imp)
-				}
-			}
-			for _, dep := range node.importedBy {
-				if !visited[dep] {
-					queue = append(queue, dep)
-				}
-			}
-		}
-
-		label := labelCluster(members, sourceRootName)
+	for label, members := range groups {
 		sort.Strings(members)
 		clusters = append(clusters, Cluster{
 			Label:     label,
@@ -57,7 +29,7 @@ func buildClusters(nodes map[string]*graphNode, sourceRootName string) []Cluster
 		})
 	}
 
-	// Sort clusters by size descending for stable output.
+	// Sort clusters by size descending, then label for stable output.
 	sort.Slice(clusters, func(i, j int) bool {
 		if clusters[i].Size != clusters[j].Size {
 			return clusters[i].Size > clusters[j].Size
@@ -100,31 +72,27 @@ func buildClusters(nodes map[string]*graphNode, sourceRootName string) []Cluster
 	return clusters
 }
 
-// labelCluster determines the label for a cluster by finding the most common
-// top-level directory among its members. When the dominant directory is a known
-// source root (e.g. "src"), it falls back to the second-level directory.
-// Ties are broken lexicographically.
-func labelCluster(members []string, sourceRootName string) string {
-	counts := make(map[string]int)
-	for _, path := range members {
-		parts := strings.SplitN(path, "/", 3)
-		dir := parts[0]
-		// If the top-level dir is a known source root and a second level exists, use it.
-		if knownSourceRoots[dir] && len(parts) >= 2 {
-			dir = parts[1]
-		} else if sourceRootName != "" && dir == sourceRootName && len(parts) >= 2 {
-			dir = parts[1]
-		}
-		counts[dir]++
+// clusterKey returns a deterministic grouping key for a file path. It uses up to
+// two path segments (e.g. "internal/hooks") to produce meaningful package-level
+// clusters. When the first segment is a known source root (e.g. "src"), it is
+// stripped so that "src/components/Button.tsx" clusters as "components".
+func clusterKey(filePath, sourceRootName string) string {
+	dir := filepath.ToSlash(filepath.Dir(filePath))
+	if dir == "." {
+		// Root-level file — use filename without extension as a last resort.
+		return strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
 	}
 
-	best := ""
-	bestCount := 0
-	for dir, count := range counts {
-		if count > bestCount || (count == bestCount && dir < best) {
-			best = dir
-			bestCount = count
-		}
+	parts := strings.Split(dir, "/")
+
+	// Strip known source root prefix so "src/hooks/..." → "hooks/...".
+	if len(parts) > 1 && (knownSourceRoots[parts[0]] || (sourceRootName != "" && parts[0] == sourceRootName)) {
+		parts = parts[1:]
 	}
-	return best
+
+	// Use up to 2 segments: "internal/hooks", "cmd/aicfg", or "schemas".
+	if len(parts) > 2 {
+		parts = parts[:2]
+	}
+	return strings.Join(parts, "/")
 }

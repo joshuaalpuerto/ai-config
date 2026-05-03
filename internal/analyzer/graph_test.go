@@ -23,11 +23,11 @@ func TestComputePriority_EntryPoint(t *testing.T) {
 func TestComputePriority_HubFile(t *testing.T) {
 	nodes := map[string]*graphNode{
 		"internal/utils/utils.go": {
-			path:         "internal/utils/utils.go",
-			importedBy:   []string{"a.go", "b.go", "c.go"},
-			exportCount:  5,
-			folderDepth:  2,
-			churn:        4,
+			path:        "internal/utils/utils.go",
+			importedBy:  []string{"a.go", "b.go", "c.go"},
+			exportCount: 5,
+			folderDepth: 2,
+			churn:       4,
 		},
 	}
 	computePriorities(nodes)
@@ -90,6 +90,43 @@ func TestIsEntryPoint(t *testing.T) {
 		got := isEntryPoint(c.path)
 		if got != c.expected {
 			t.Errorf("isEntryPoint(%q) = %v, want %v", c.path, got, c.expected)
+		}
+	}
+}
+
+func TestTopHubs_ExcludesTestFiles(t *testing.T) {
+	nodes := map[string]*graphNode{
+		"internal/hooks/engine.go":      {path: "internal/hooks/engine.go", priority: 30.0, isTestFile: false},
+		"internal/hooks/engine_test.go": {path: "internal/hooks/engine_test.go", priority: 50.0, isTestFile: true},
+		"src/app.test.ts":               {path: "src/app.test.ts", priority: 40.0, isTestFile: true},
+	}
+	hubs := topHubs(nodes, 10)
+	if len(hubs) != 1 {
+		t.Fatalf("expected 1 hub (test files excluded), got %d", len(hubs))
+	}
+	if hubs[0].Path != "internal/hooks/engine.go" {
+		t.Errorf("expected engine.go, got %s", hubs[0].Path)
+	}
+}
+
+func TestIsTestFile(t *testing.T) {
+	cases := []struct {
+		path     string
+		expected bool
+	}{
+		{"internal/hooks/engine_test.go", true},
+		{"internal/hooks/engine.go", false},
+		{"src/app.test.ts", true},
+		{"src/app.spec.tsx", true},
+		{"src/app.ts", false},
+		{"tests/test_models.py", true},
+		{"tests/models_test.py", true},
+		{"app/models.py", false},
+	}
+	for _, c := range cases {
+		got := isTestFile(c.path)
+		if got != c.expected {
+			t.Errorf("isTestFile(%q) = %v, want %v", c.path, got, c.expected)
 		}
 	}
 }

@@ -16,8 +16,10 @@ type graphNode struct {
 	lines        int
 	exportCount  int
 	exportNames  []string
+	fileDoc      string
 	churn        int
 	isEntryPoint bool
+	isTestFile   bool
 	folderDepth  int
 	priority     float64
 }
@@ -49,6 +51,8 @@ func buildGraph(files []string, cfg parser.Config) (map[string]*graphNode, error
 			lines:       res.Lines,
 			exportCount: res.ExportCount,
 			exportNames: res.ExportNames,
+			fileDoc:     res.FileDoc,
+			isTestFile:  isTestFile(rel),
 			folderDepth: strings.Count(rel, "/"),
 		}
 	}
@@ -114,13 +118,16 @@ func computePriorities(nodes map[string]*graphNode) {
 	}
 }
 
-// topHubs returns the top N nodes by priority.
+// topHubs returns the top N non-test nodes by priority.
 func topHubs(nodes map[string]*graphNode, n int) []Hub {
 	type ranked struct {
 		node *graphNode
 	}
 	all := make([]ranked, 0, len(nodes))
 	for _, node := range nodes {
+		if node.isTestFile {
+			continue
+		}
 		all = append(all, ranked{node})
 	}
 	sort.Slice(all, func(i, j int) bool {
@@ -137,6 +144,7 @@ func topHubs(nodes map[string]*graphNode, n int) []Hub {
 			FanOut:      len(r.node.imports),
 			Priority:    r.node.priority,
 			ExportNames: r.node.exportNames,
+			FileDoc:     r.node.fileDoc,
 		})
 	}
 	return hubs
@@ -200,4 +208,26 @@ func nodesToFileMap(nodes map[string]*graphNode) map[string]FileNode {
 		}
 	}
 	return out
+}
+
+// isTestFile returns true for test/spec files across supported languages.
+func isTestFile(repoRelPath string) bool {
+	name := filepath.Base(repoRelPath)
+	nameNoExt := strings.TrimSuffix(name, filepath.Ext(name))
+
+	// Go: _test.go suffix.
+	if strings.HasSuffix(name, "_test.go") {
+		return true
+	}
+	// JS/TS: .test. or .spec. anywhere in the filename.
+	if strings.Contains(name, ".test.") || strings.Contains(name, ".spec.") {
+		return true
+	}
+	// Python: test_ prefix or _test suffix.
+	if strings.HasSuffix(name, ".py") {
+		if strings.HasPrefix(nameNoExt, "test_") || strings.HasSuffix(nameNoExt, "_test") {
+			return true
+		}
+	}
+	return false
 }

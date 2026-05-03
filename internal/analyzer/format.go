@@ -54,7 +54,9 @@ func FormatContext(r *AnalysisResult) string {
 				break
 			}
 			line := fmt.Sprintf("%d. `%s` — imported by %d files", i+1, hub.Path, hub.FanIn)
-			if len(hub.ExportNames) > 0 {
+			if hub.FileDoc != "" {
+				line += fmt.Sprintf(". %s", hub.FileDoc)
+			} else if len(hub.ExportNames) > 0 {
 				shown := hub.ExportNames
 				if len(shown) > 6 {
 					shown = shown[:6]
@@ -78,6 +80,45 @@ func FormatContext(r *AnalysisResult) string {
 		fmt.Fprintln(&b)
 	} else if !r.GitChurnAvailable {
 		fmt.Fprintf(&b, "_Git history unavailable — hotspot analysis skipped._\n\n")
+	}
+
+	// Clusters
+	nonSingleton := 0
+	for _, c := range r.Clusters {
+		if !c.Singleton {
+			nonSingleton++
+		}
+	}
+	if nonSingleton > 0 {
+		fmt.Fprintf(&b, "## Clusters (package groups)\n")
+		for _, c := range r.Clusters {
+			if c.Singleton {
+				continue
+			}
+			line := fmt.Sprintf("- **%s** — %d files", c.Label, c.Size)
+			if len(c.DependsOn) > 0 {
+				line += fmt.Sprintf(". Depends on: %s", strings.Join(c.DependsOn, ", "))
+			}
+			fmt.Fprintln(&b, line)
+		}
+		fmt.Fprintln(&b)
+	}
+
+	// Doc Coverage
+	if len(r.Coverage) > 0 {
+		fmt.Fprintf(&b, "## Doc Coverage\n")
+		fmt.Fprintf(&b, "| Area | Status | Mentioned In |\n")
+		fmt.Fprintf(&b, "|------|--------|-------------|\n")
+		for _, c := range r.Coverage {
+			status := "covered"
+			docs := strings.Join(c.DocFiles, ", ")
+			if !c.Covered {
+				status = "**GAP**"
+				docs = "—"
+			}
+			fmt.Fprintf(&b, "| %s | %s | %s |\n", c.Area, status, docs)
+		}
+		fmt.Fprintln(&b)
 	}
 
 	return strings.TrimRight(b.String(), "\n")

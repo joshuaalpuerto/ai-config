@@ -13,6 +13,7 @@ type Result struct {
 	ExportCount int
 	ExportNames []string // names of top-level exported symbols
 	Lines       int
+	FileDoc     string // first doc comment (package doc for Go, leading comment for others)
 }
 
 // LanguageParser parses a single source file.

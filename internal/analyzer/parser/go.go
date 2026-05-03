@@ -24,7 +24,7 @@ func (p *GoParser) Parse(path string) (Result, error) {
 	}
 
 	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, path, src, 0)
+	f, err := parser.ParseFile(fset, path, src, parser.ParseComments)
 	if err != nil {
 		// Partial parse is fine for import extraction; only fail on read errors.
 		return Result{Lines: countLines(string(src))}, nil
@@ -50,11 +50,21 @@ func (p *GoParser) Parse(path string) (Result, error) {
 
 	exportCount, exportNames := countGoExports(f)
 
+	var fileDoc string
+	if f.Doc != nil {
+		fileDoc = strings.TrimSpace(f.Doc.Text())
+		// Take only the first sentence/line for brevity.
+		if idx := strings.IndexByte(fileDoc, '\n'); idx > 0 {
+			fileDoc = fileDoc[:idx]
+		}
+	}
+
 	return Result{
 		Imports:     dedupeStrings(imports),
 		ExportCount: exportCount,
 		ExportNames: exportNames,
 		Lines:       countLines(string(src)),
+		FileDoc:     fileDoc,
 	}, nil
 }
 
