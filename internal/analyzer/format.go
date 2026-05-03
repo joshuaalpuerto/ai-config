@@ -104,23 +104,6 @@ func FormatContext(r *AnalysisResult) string {
 		fmt.Fprintln(&b)
 	}
 
-	// Doc Coverage
-	if len(r.Coverage) > 0 {
-		fmt.Fprintf(&b, "## Doc Coverage\n")
-		fmt.Fprintf(&b, "| Area | Status | Mentioned In |\n")
-		fmt.Fprintf(&b, "|------|--------|-------------|\n")
-		for _, c := range r.Coverage {
-			status := "covered"
-			docs := strings.Join(c.DocFiles, ", ")
-			if !c.Covered {
-				status = "**GAP**"
-				docs = "—"
-			}
-			fmt.Fprintf(&b, "| %s | %s | %s |\n", c.Area, status, docs)
-		}
-		fmt.Fprintln(&b)
-	}
-
 	return strings.TrimRight(b.String(), "\n")
 }
 

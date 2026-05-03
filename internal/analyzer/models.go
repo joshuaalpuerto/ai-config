@@ -14,17 +14,7 @@ type AnalysisResult struct {
 	Hubs              []Hub               `json:"hubs"`
 	Hotspots          []Hotspot           `json:"hotspots"`
 	Clusters          []Cluster           `json:"clusters"`
-	Coverage          []CoverageEntry     `json:"coverage,omitempty"` // doc coverage per package area
 	Files             map[string]FileNode `json:"files,omitempty"`
-}
-
-// CoverageEntry records whether a code area (package/cluster) is mentioned
-// in any documentation file. DocFiles lists the repo-relative paths of .md
-// files that reference the area keyword.
-type CoverageEntry struct {
-	Area     string   `json:"area"`               // package keyword (e.g. "hooks")
-	Covered  bool     `json:"covered"`            // true if at least one doc mentions it
-	DocFiles []string `json:"docFiles,omitempty"` // which .md files mention it
 }
 
 // TechStack describes the detected languages and frameworks.

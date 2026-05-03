@@ -98,9 +98,6 @@ func (a *Analyzer) Analyze(root string) (*AnalysisResult, error) {
 		Clusters:          clusters,
 	}
 
-	// Phase 6: cross-reference hubs/clusters against doc files.
-	result.Coverage = computeCoverage(root, result.AllFiles, result.Hubs, result.Clusters)
-
 	if a.Verbose {
 		result.Files = nodesToFileMap(nodes)
 	}
