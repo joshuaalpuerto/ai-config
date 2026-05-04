@@ -316,7 +316,7 @@ func runDocAnalysis(root, format, outputPath string) error {
 		}
 	}
 
-	result, err := analyzer.AnalyzeDocFreshness(root, docRoots)
+	result, err := analyzer.AnalyzeDocFreshness(root, docRoots, nil)
 	if err != nil {
 		return fmt.Errorf("analyze doc: %w", err)
 	}

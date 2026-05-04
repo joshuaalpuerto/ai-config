@@ -10,12 +10,43 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 )
 
+// DefaultDocExclude is the default set of directory names excluded from doc
+// collection. These are dependency/build/cache folders that should never be
+// treated as project documentation.
+var DefaultDocExclude = []string{
+	"node_modules",
+	"vendor",
+	".terraform",
+	"__pycache__",
+	".venv",
+	"venv",
+	".tox",
+	".mypy_cache",
+	".pytest_cache",
+	"dist",
+	"build",
+	"target",
+	".next",
+	".nuxt",
+	".output",
+	".gradle",
+	".m2",
+	".cargo",
+	"pkg/mod",
+	"Pods",
+	".bundle",
+}
+
 // AnalyzeDocFreshness runs a git-based freshness analysis on documentation files
 // found under the given docRoots (relative or absolute paths). It returns a
 // DocAnalysisResult with each .md file's last-commit date and days-since-update,
 // sorted stalest-first. When git is unavailable, DaysSinceUpdate is -1 for all files.
-func AnalyzeDocFreshness(root string, docRoots []string) (*DocAnalysisResult, error) {
-	files, err := collectDocFiles(root, docRoots)
+// The exclude parameter specifies directory names to skip; if nil, DefaultDocExclude is used.
+func AnalyzeDocFreshness(root string, docRoots []string, exclude []string) (*DocAnalysisResult, error) {
+	if exclude == nil {
+		exclude = DefaultDocExclude
+	}
+	files, err := collectDocFiles(root, docRoots, exclude)
 	if err != nil {
 		return nil, err
 	}
@@ -75,13 +106,23 @@ func AnalyzeDocFreshness(root string, docRoots []string) (*DocAnalysisResult, er
 
 // collectDocFiles walks each docRoot and returns the absolute paths of all .md files
 // found. docRoots may be files, directories, or glob patterns (supporting ** via
-// doublestar); relative paths are resolved against root.
-func collectDocFiles(root string, docRoots []string) ([]string, error) {
+// doublestar); relative paths are resolved against root. Paths containing any
+// directory segment in exclude are skipped.
+func collectDocFiles(root string, docRoots []string, exclude []string) ([]string, error) {
+	excludeSet := make(map[string]struct{}, len(exclude))
+	for _, e := range exclude {
+		excludeSet[e] = struct{}{}
+	}
+
 	seen := make(map[string]struct{})
 	var results []string
 
 	add := func(abs string) {
 		if _, ok := seen[abs]; !ok {
+			rel, _ := filepath.Rel(root, abs)
+			if isExcludedPath(filepath.ToSlash(rel), excludeSet) {
+				return
+			}
 			seen[abs] = struct{}{}
 			results = append(results, abs)
 		}
@@ -158,4 +199,14 @@ func expandGlob(root, pattern string) ([]string, error) {
 
 func isDocFile(path string) bool {
 	return filepath.Ext(path) == ".md"
+}
+
+// isExcludedPath reports whether any path segment is in the exclude set.
+func isExcludedPath(slashRel string, excludeSet map[string]struct{}) bool {
+	for _, seg := range strings.Split(slashRel, "/") {
+		if _, ok := excludeSet[seg]; ok {
+			return true
+		}
+	}
+	return false
 }
