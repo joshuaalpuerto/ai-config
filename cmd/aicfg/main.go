@@ -42,7 +42,6 @@ func main() {
 		cleanCmd(opts),
 		hooksCmd(opts),
 		analyzeCmd(),
-		docauditCmd(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -90,6 +89,11 @@ func buildCmd(opts *rootOpts) *cobra.Command {
 			fmt.Println()
 			fmt.Println("Building ai-config...")
 			fmt.Println()
+
+			if err := generateSkills(opts.cfg, opts.rootDir, opts.srcDir, os.Stdout); err != nil {
+				return err
+			}
+
 			if err := transpiler.TranspileAll(
 				opts.srcDir,
 				opts.cfg.Platforms,
@@ -165,8 +169,6 @@ func hooksCmd(opts *rootOpts) *cobra.Command {
 			return runHooks(hooksFilePath, opts.platform, opts.cfg.ToolMap[opts.platform])
 		},
 	}
-
-	cmd.AddCommand(hooksGenerateCmd())
 
 	return cmd
 }

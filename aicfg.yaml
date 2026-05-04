@@ -6,6 +6,10 @@ analyze_exclude:
   - .claude
   - .github
 
+generate_skills:
+  - docaudit
+  - hooks-generator
+
 platforms:
   # Claude Code — canonical platform, passthrough
   claude:

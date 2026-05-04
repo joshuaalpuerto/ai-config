@@ -36,6 +36,7 @@ type AicfgConfig struct {
 	SrcHooksFile   string          `yaml:"src_hooks_file,omitempty"`
 	AnalyzeExclude []string        `yaml:"analyze_exclude,omitempty"`
 	DocAudit       DocAuditConfig  `yaml:"doc_audit,omitempty"`
+	GenerateSkills []string        `yaml:"generate_skills,omitempty"`
 	Platforms      PlatformsConfig `yaml:"platforms"`
 	ToolMap        ToolMap         `yaml:"tool_map"`
 }

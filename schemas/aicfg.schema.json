@@ -43,6 +43,15 @@
         }
       }
     },
+    "generate_skills": {
+      "type": "array",
+      "description": "Skills to regenerate during 'aicfg build'. Each entry names a built-in skill generator whose output is written to <src_dir>/skills/<name>/SKILL.md before transpilation.",
+      "items": {
+        "type": "string",
+        "enum": ["docaudit", "hooks-generator"]
+      },
+      "uniqueItems": true
+    },
     "tool_map": {
       "type": "object",
       "description": "Maps canonical tool names to platform-specific equivalents. Omit a tool to drop it for that platform.",
