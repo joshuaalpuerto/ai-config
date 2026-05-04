@@ -20,12 +20,6 @@ type GenerateConfig struct {
 const skillTemplate = `---
 name: hooks-generator
 description: Generate a hooks.yaml policy file for {{.ProjectName}} — contextual reminders injected when contributors (human or AI) work in areas where missing context would cause incorrect, non-compiling, or insecure output.
-allowed-tools:
-  - Bash
-  - Read
-  - Write
-  - Edit
-  - Agent
 ---
 
 # Hooks Generator: {{.ProjectName}}

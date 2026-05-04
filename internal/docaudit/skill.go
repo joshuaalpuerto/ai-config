@@ -23,10 +23,6 @@ type Config struct {
 const skillTemplate = `---
 name: doc-audit
 description: Surface contributor-enablement gaps in {{.ProjectName}} — missing or stale docs and undocumented conventions that would prevent a new joiner (human or AI) from producing convention-adherent contributions immediately.
-allowed-tools:
-  - Bash
-  - Read
-  - Agent
 ---
 
 # Doc Audit: {{.ProjectName}}
