@@ -165,6 +165,9 @@ func hooksCmd(opts *rootOpts) *cobra.Command {
 			return runHooks(hooksFilePath, opts.platform, opts.cfg.ToolMap[opts.platform])
 		},
 	}
+
+	cmd.AddCommand(hooksGenerateCmd())
+
 	return cmd
 }
 

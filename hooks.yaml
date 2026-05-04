@@ -1,31 +1,37 @@
 version: "1"
 
-# Event: Before a tool is executed
 PreToolUse:
-  # Rule: Inject Python coding standards when editing Python files
+  # Source: Contributor Blocker #1 — hooks.yaml path patterns silently fail if wrong form used
   - match:
       tools: ["Edit", "Write"]
-      paths: ["*.py", "*.pyi"]
+      paths: ["hooks.yaml"]
     action:
-      inject: "./src/context/python-standards.md"
+      inject: "./docs/hooks.md"
 
-  # Rule: Inject REST API design guidelines for API routes
+  # Source: Contributor Blocker #2 — src/ frontmatter must match JSON Schema
   - match:
       tools: ["Edit", "Write"]
-      paths: ["**/src/api/**", "**/routes/**"]
+      paths: ["**/src/**/*.md"]
     action:
-      inject: "./src/context/api-design-guidelines.md"
-  - match:
-      tools: ["Write"]
-      paths: ["*.go"]
-    action:
-      inject_inline: "You mush add `howdy go developer` on top of the file."
+      inject_inline: |
+        ## Source file frontmatter contract
+        - Every src/ markdown file requires YAML frontmatter validated against schemas/*.schema.json
+        - Required fields vary by type: agents need `name` + `description`; commands need `name` + `description`; rules need `description`; skills need `name` + `description`
+        - `tools` and `allowed-tools` accept either a YAML list or a space-separated string
+        - Platform overrides go under `overrides.<platform>:` with the same fields (minus overrides itself)
+        - Run `aicfg validate` after editing to catch schema violations before build
 
-# Event: After a tool completes successfully
+  # Source: Complexity Trap #1 — hooks engine evaluation semantics
+  - match:
+      tools: ["Edit", "Write"]
+      paths: ["**/internal/hooks/engine.go", "**/internal/hooks/loader.go", "**/internal/hooks/models.go"]
+    action:
+      inject: "./docs/hooks.md"
+
 PostToolUse:
-  # Rule: Run linting checks after file changes
+  # Source: Lint detection — Go vet for all Go source files
   - match:
       tools: ["Write", "Edit"]
-      paths: ["*.ts", "*.tsx", "*.js", "*.jsx"]
+      paths: ["*.go"]
     action:
-      run: "./scripts/lint-check.sh"
+      run_inline: "go vet ./..."
