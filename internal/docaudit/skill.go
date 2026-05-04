@@ -318,6 +318,26 @@ A prioritized table grouped by effort. List quick wins first (` + "`annotate sta
 **Effort values:** ` + "`trivial`" + ` (< 5 min, e.g. adding a status line), ` + "`small`" + ` (< 30 min, e.g. fixing a section), ` + "`medium`" + ` (1–2 hours, e.g. writing a new focused guide), ` + "`large`" + ` (half day+, e.g. comprehensive new doc with examples).
 
 **Target surface values:** the path the change lands in (any path under the configured doc corpus, e.g. ` + "`docs/`, `README.md`, `.claude/rules/`, `.github/instructions/`, `CLAUDE.md`, `AGENTS.md`" + `).
+
+---
+
+### Step 6 — Offer to apply fixes
+
+After presenting the full gap report, ask the user:
+
+> Would you like me to apply these fixes now? I can:
+>
+> 1. **Apply all** — create new docs and update existing ones for every item in the Suggested Actions table.
+> 2. **Apply selected** — let you pick which actions to apply (by number from the table).
+> 3. **Skip** — end the audit here; no files will be created or modified.
+
+Wait for the user's response before proceeding. If the user selects option 1 or 2:
+
+- For each ` + "`new doc`" + ` action: create the file at the suggested path with content that addresses the identified gap. Keep docs concise and actionable — match the style of existing docs in the corpus.
+- For each ` + "`update doc`" + ` action: edit the existing file to address the divergences and omissions identified. Preserve the doc's existing structure and voice; only add or correct the specific sections that are stale or missing.
+- For each ` + "`annotate status`" + ` action: prepend the status annotation line at the top of the file (below any frontmatter).
+
+After applying, output a summary of files created and modified.
 `
 
 var parsedTemplate = template.Must(template.New("skill").Funcs(template.FuncMap{

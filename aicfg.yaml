@@ -10,6 +10,13 @@ generate_skills:
   - docaudit
   - hooks-generator
 
+doc_audit:
+  paths:
+    - "**/docs/*"
+    - "**/README.md"
+    - "**/AGENTS.md"
+    - "**/CLAUDE.md"
+
 platforms:
   # Claude Code — canonical platform, passthrough
   claude:
