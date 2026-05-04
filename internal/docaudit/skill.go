@@ -34,7 +34,7 @@ The goal is not technical completeness. It is identifying where **missing or mis
 ## Project Configuration
 
 - **Target directory:** ` + "`{{.TargetDir}}`" + `
-- **Doc corpus:** {{formatList .DocRoots}}
+- **Doc corpus:** {{formatList .DocRoots}} (supports glob patterns, e.g. ` + "`**/AGENTS.md`" + `)
 {{- if .AnalyzeExclude}}
 - **Analyze excludes:** {{formatList .AnalyzeExclude}}
 {{- end}}

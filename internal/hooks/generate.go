@@ -36,7 +36,7 @@ A hook rule is justified **only** when working in an area without the injected c
 ## Project Configuration
 
 - **Target directory:** ` + "`{{.TargetDir}}`" + `
-- **Doc corpus:** {{formatList .DocRoots}}
+- **Doc corpus:** {{formatList .DocRoots}} (supports glob patterns, e.g. ` + "`**/AGENTS.md`" + `)
 {{- if .AnalyzeExclude}}
 - **Analyze excludes:** {{formatList .AnalyzeExclude}}
 {{- end}}

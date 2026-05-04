@@ -4,7 +4,10 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
+
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 // AnalyzeDocFreshness runs a git-based freshness analysis on documentation files
@@ -71,11 +74,33 @@ func AnalyzeDocFreshness(root string, docRoots []string) (*DocAnalysisResult, er
 }
 
 // collectDocFiles walks each docRoot and returns the absolute paths of all .md files
-// found. docRoots may be files or directories; relative paths are resolved against root.
+// found. docRoots may be files, directories, or glob patterns (supporting ** via
+// doublestar); relative paths are resolved against root.
 func collectDocFiles(root string, docRoots []string) ([]string, error) {
+	seen := make(map[string]struct{})
 	var results []string
 
+	add := func(abs string) {
+		if _, ok := seen[abs]; !ok {
+			seen[abs] = struct{}{}
+			results = append(results, abs)
+		}
+	}
+
 	for _, dr := range docRoots {
+		if isGlobPattern(dr) {
+			matches, err := expandGlob(root, dr)
+			if err != nil {
+				return nil, err
+			}
+			for _, m := range matches {
+				if isDocFile(m) {
+					add(m)
+				}
+			}
+			continue
+		}
+
 		if !filepath.IsAbs(dr) {
 			dr = filepath.Join(root, dr)
 		}
@@ -90,7 +115,7 @@ func collectDocFiles(root string, docRoots []string) ([]string, error) {
 
 		if !info.IsDir() {
 			if isDocFile(dr) {
-				results = append(results, dr)
+				add(dr)
 			}
 			continue
 		}
@@ -100,7 +125,7 @@ func collectDocFiles(root string, docRoots []string) ([]string, error) {
 				return err
 			}
 			if !d.IsDir() && isDocFile(path) {
-				results = append(results, path)
+				add(path)
 			}
 			return nil
 		}); err != nil {
@@ -109,6 +134,26 @@ func collectDocFiles(root string, docRoots []string) ([]string, error) {
 	}
 
 	return results, nil
+}
+
+// isGlobPattern reports whether s contains glob metacharacters.
+func isGlobPattern(s string) bool {
+	return strings.ContainsAny(s, "*?[{")
+}
+
+// expandGlob expands a glob pattern relative to root and returns absolute paths
+// of matched files. Uses doublestar for ** support.
+func expandGlob(root, pattern string) ([]string, error) {
+	fsys := os.DirFS(root)
+	matches, err := doublestar.Glob(fsys, pattern)
+	if err != nil {
+		return nil, err
+	}
+	abs := make([]string, 0, len(matches))
+	for _, m := range matches {
+		abs = append(abs, filepath.Join(root, filepath.FromSlash(m)))
+	}
+	return abs, nil
 }
 
 func isDocFile(path string) bool {
