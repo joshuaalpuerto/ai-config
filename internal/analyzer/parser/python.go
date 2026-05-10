@@ -12,6 +12,13 @@ var (
 	pyPlainImport = regexp.MustCompile(`(?m)^import\s+([\w.]+)`)
 	// pyPublicDef matches top-level def/class without a leading underscore.
 	pyPublicDef = regexp.MustCompile(`(?m)^(?:def|class)\s+([A-Za-z][A-Za-z0-9_]*)`)
+	// pyAll matches __all__ = [...] and captures the bracket contents.
+	pyAll = regexp.MustCompile(`(?s)__all__\s*=\s*\[([^\]]+)\]`)
+	// pyAllEntry extracts quoted names from inside an __all__ list.
+	pyAllEntry = regexp.MustCompile(`['"]([A-Za-z_][A-Za-z0-9_]*)['"]`)
+	// pyTypeAlias matches capitalized top-level assignments like MyType = TypedDict(...).
+	// Only captures names starting with an uppercase letter to avoid false positives.
+	pyTypeAlias = regexp.MustCompile(`(?m)^([A-Z][A-Za-z0-9_]*)\s*=`)
 )
 
 // PythonParser parses Python source files using regex.
@@ -48,10 +55,7 @@ func (p *PythonParser) Parse(path string) (Result, error) {
 		}
 	}
 
-	var exportNames []string
-	for _, m := range pyPublicDef.FindAllStringSubmatch(content, -1) {
-		exportNames = append(exportNames, m[1])
-	}
+	exportNames := extractPythonExports(content)
 
 	return Result{
 		Imports:     dedupeStrings(resolved),
@@ -59,6 +63,37 @@ func (p *PythonParser) Parse(path string) (Result, error) {
 		ExportNames: exportNames,
 		Lines:       countLines(content),
 	}, nil
+}
+
+// extractPythonExports returns the exported symbol names from Python source.
+// If __all__ is defined, it is the authoritative list. Otherwise, top-level
+// def/class names and capitalized type aliases are collected.
+func extractPythonExports(content string) []string {
+	// __all__ is authoritative when present.
+	if m := pyAll.FindStringSubmatch(content); m != nil {
+		var names []string
+		for _, entry := range pyAllEntry.FindAllStringSubmatch(m[1], -1) {
+			names = append(names, entry[1])
+		}
+		return dedupeStrings(names)
+	}
+
+	seen := make(map[string]bool)
+	var names []string
+	add := func(name string) {
+		if !seen[name] {
+			seen[name] = true
+			names = append(names, name)
+		}
+	}
+
+	for _, m := range pyPublicDef.FindAllStringSubmatch(content, -1) {
+		add(m[1])
+	}
+	for _, m := range pyTypeAlias.FindAllStringSubmatch(content, -1) {
+		add(m[1])
+	}
+	return names
 }
 
 // resolve converts a raw Python import string to a repo-relative path.
