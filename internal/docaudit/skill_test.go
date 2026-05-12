@@ -63,7 +63,7 @@ func TestGenerateSkill_containsCoreSections(t *testing.T) {
 		"### Docs Needing Updates",
 		"### Undocumented Dependency Conventions",
 		"### Suggested Actions",
-		"### Step 4.5",
+		"#### 4d",
 		"### Step 7",
 		"#### Task A",
 		"#### Task B",

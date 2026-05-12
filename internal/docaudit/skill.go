@@ -60,6 +60,12 @@ The goal is not technical completeness. It is identifying where **missing or mis
 
 Steps 1, 2, and 3 run in parallel. Wait for all three before starting Step 4.
 
+**Severity gate (applies to every finding in Steps 4–5):** Before including any finding, answer: *"What does a contributor get wrong in week 1 if this is missing?"* If the answer is hypothetical ("a contributor *might*…"), already prevented by tooling (type system, lint rule, CI), or covered by an existing doc/config — drop it.
+
+**Report cap:** No more than 5 findings per category. If more exist, include only the top 5 ranked by severity (= likelihood × impact of a real mistake). State the total count and note that lower-severity items were omitted.
+
+**Category precedence:** A finding appears in exactly one category. If it qualifies for multiple, assign it to the highest-severity one: Contributor Blocker > Complexity Trap > Undocumented Contract > Docs Needing Updates > Undocumented Dependency Convention > Superseded Records.
+
 ---
 
 ### Step 1 — Run static analysis
@@ -97,7 +103,7 @@ For each dependency, ask:
 - Are those conventions documented anywhere in the doc corpus?
 - Does the project have a **wrapper or abstraction** around it? (See Task B.)
 
-> **Wrapper-precedence rule:** An undocumented project wrapper around a popular library is **more critical** than an undocumented raw library. Contributors will reach for the well-known library directly and silently bypass the team convention.
+> **Wrapper signal:** An undocumented project wrapper is a higher-priority signal than an undocumented raw library — but only report it if you find concrete ` + "`file:line`" + ` evidence of feature code importing the raw library instead of the wrapper.
 
 ---
 
@@ -165,55 +171,58 @@ Return concrete findings with ` + "`file:line`" + ` references. Skip categories 
 
 The guiding question for every check: *"If a new contributor starts working in this area today, would they have enough context to make a correct change without breaking something?"*
 
+Apply the severity gate to each candidate finding before including it.
+
 #### 4a — Clusters (Contributor Blockers)
 
-For each cluster from Step 1: does it contain files contributors directly author or edit? If yes and there is no doc explaining the authoring conventions → **Contributor Blocker**. Skip clusters that are pure internal implementation.
+For each cluster from Step 1: does it contain files contributors directly author or edit? If yes and there is no doc explaining the authoring conventions → **Contributor Blocker**. Skip clusters that are pure internal implementation or that have no contributor-facing contract.
 
 #### 4b — Hub files (Undocumented Contracts)
 
-For each hub file: does it define a contract, format, or interface contributors must follow? If yes and there is no accessible doc covering it → **Undocumented Contract**.
+For each hub file: does it define a contract, format, or interface contributors must follow? If yes and there is no accessible doc covering it → **Undocumented Contract**. Skip hub files that are pure wiring nexuses with no contributor-facing contract (e.g. a DI container that contributors never edit directly).
 
 #### 4c — Hotspots (Complexity Traps)
 
 For each hotspot: does its high churn and size suggest non-obvious complexity (ordering rules, edge cases, platform differences, pitfalls)? If yes and there is no guidance → **Complexity Trap**.
 
-#### 4d — Existing doc completeness (Docs Needing Updates)
+#### 4d — Build the Single Source of Truth map
 
-Using Task A's coverage map plus Task B's wrappers and Task C's patterns:
-
-> **Immutable-document rule:** ADRs, RFCs, design docs, postmortems, and migration guides are point-in-time records. **Never flag them as "Docs Needing Updates."** If an ADR/RFC describes a decision that current code has superseded, report it under **Superseded Records** (Step 5) — the only valid action is adding a status annotation (e.g. "Status: Superseded by ADR-XXX") at the top of the file. Detect these by path pattern (e.g. ` + "`ADR/`, `RFC/`, `adr-`, `rfc-`" + `) or by title/heading conventions.
-
-For each **mutable** doc in the corpus, check:
-
-1. Does the doc mention wrappers Task B identified for libraries it covers? If a wrapper exists and the doc covers the underlying library without naming the wrapper → **Doc Needs Update**.
-2. Does the doc's described pattern match what Task C found in actual usage? If the codebase has evolved a more specific convention → **Doc Needs Update**.
-3. Does the doc claim broad coverage in its title/intro but only address one narrow aspect? → **Doc Needs Update** (false-coverage docs are worse than missing docs).
-4. Use freshness signal as a tiebreaker: stale + hot = highest-confidence update target.
-5. **Example validation against SoT docs.** For any example in the doc, check whether it conforms to the canonical pattern documented elsewhere (validation tags, route patterns, error handling, codegen contracts). If the doc's own example contradicts a SoT doc (e.g. a route example that defines search-param defaults the BFF struct should own), flag this as a **Doc Contradiction** under Docs Needing Updates. Existing examples are evidence of past mistakes, not authority.
-
-#### 4e — Dependency conventions (Undocumented Dependency Conventions)
-
-For each key dependency from Step 2 with no corresponding doc coverage — and especially those with project wrappers from Task B — produce an **Undocumented Dependency Convention** entry.
-
----
-
-### Step 5 — Build the Single Source of Truth map
-
-Before producing the Suggested Actions table, list every cross-cutting topic from Tasks B and C and assign **one** authoritative doc to each. Other docs may reference but **never restate** content owned by the SoT doc.
+Before evaluating doc completeness, list every cross-cutting topic from Tasks B and C and assign **one** authoritative doc to each. Other docs may reference but **never restate** content owned by the SoT doc. Cap at 8 rows maximum — only topics with multiple competing docs need an entry.
 
 | Topic | SoT doc | Allowed references |
 |---|---|---|
-| Backend wrapper inventory | e.g. ` + "`BACKEND_PATTERNS.md`" + ` | ` + "`BFF.md`" + `, AGENTS.md |
-| Validation tags / contract | e.g. ` + "`BFF_VALIDATION.md`" + ` | ` + "`BACKEND_PATTERNS.md`" + ` |
-| Frontend wrapper inventory | e.g. ` + "`FRONTEND_WRAPPERS.md`" + ` | ` + "`CODE_STYLE.md`" + `, ` + "`API_DATA_FETCHING.md`" + ` |
-| Claim-based authorization | e.g. ` + "`UI_AUTHORIZATION.md`" + ` | routing docs, ` + "`SECURITY.md`" + ` |
+| (example) Backend wrapper inventory | e.g. ` + "`BACKEND_PATTERNS.md`" + ` | ` + "`BFF.md`" + `, AGENTS.md |
 | ... | ... | ... |
 
 Any Suggested Action that would write content into a non-SoT doc is rejected or rewritten as "link to SoT". If two docs both have a claim on the same topic, pick one and add a ` + "`consolidate`" + ` action to move content into it.
 
+#### 4e — Existing doc completeness (Docs Needing Updates)
+
+Using Task A's coverage map, Task B's wrappers, Task C's patterns, **and the SoT map from 4d**:
+
+> **Immutable-document rule:** ADRs, RFCs, design docs, postmortems, and migration guides are point-in-time records. **Never flag them as "Docs Needing Updates."** If an ADR/RFC describes a decision that current code has superseded, report it under **Superseded Records** — the only valid action is adding a status annotation (e.g. "Status: Superseded by ADR-XXX") at the top of the file. Detect these by path pattern (e.g. ` + "`ADR/`, `RFC/`, `adr-`, `rfc-`" + `) or by title/heading conventions.
+
+For each **mutable** doc in the corpus, check — but only include as "Doc Needs Update" if a contributor following the doc as-is would produce **incorrect output** (not merely incomplete):
+
+1. Does the doc cover a library for which Task B found a project wrapper, without naming the wrapper? Only flag if there are concrete ` + "`file:line`" + ` offenders importing the raw library in feature code.
+2. Does the doc's described pattern contradict what Task C found in actual usage? Only flag if the divergence would cause a build failure, test failure, or review rejection.
+3. Does the doc claim broad coverage but only address one narrow aspect? Only flag if the false coverage leads to a wrong assumption that causes breakage.
+4. **Example validation against the SoT map (from 4d).** For any example in the doc, verify it conforms to the canonical pattern in the SoT doc for that topic. Flag as **Doc Contradiction** only if the example would produce code that violates a documented contract.
+
+Use freshness signal (staleness data from Step 1) as a tiebreaker when ranking findings, not as a standalone trigger.
+
+#### 4f — Dependency conventions (Undocumented Dependency Conventions)
+
+Report a dependency convention only when **both** conditions are met:
+
+1. A project wrapper exists (from Task B) that contributors should use instead of the raw library, AND
+2. There are concrete ` + "`file:line`" + ` offenders in feature code that import the raw library directly.
+
+Do **not** produce entries for dependencies that are used correctly or have no wrapper.
+
 ---
 
-### Step 6 — Produce the gap report
+### Step 5 — Produce the gap report
 
 Output a report using the format below. Skip sections that have no findings rather than emitting empty headers.
 
@@ -358,7 +367,7 @@ A prioritized table grouped by effort. List quick wins first (` + "`annotate sta
 
 ---
 
-### Step 7 — Offer to apply fixes
+### Step 6 — Offer to apply fixes
 
 After presenting the full gap report, ask the user:
 
@@ -368,12 +377,20 @@ After presenting the full gap report, ask the user:
 > 2. **Apply selected** — let you pick which actions to apply (by number from the table).
 > 3. **Skip** — end the audit here; no files will be created or modified.
 
-Wait for the user's response before proceeding. If the user selects option 1 or 2:
+Wait for the user's response before proceeding. If the user selects option 1 or 2, proceed to Step 7.
 
-**Pre-write validation gate (run for every action before writing):**
+---
+
+### Step 7 — Apply fixes (subagent-delegated)
+
+**Spawn a fresh subagent** for writing. The orchestrator must NOT write docs itself — delegate to a subagent that receives only: (a) the Suggested Actions table, (b) the SoT map from Step 4d, and (c) the Audience and style defaults. This prevents context fatigue from corrupting output quality.
+
+**Instructions for the writing subagent:**
+
+For each action, run the pre-write validation gate before writing:
 
 1. **SoT check.** Does the content belong in the SoT doc per the Step 4.5 map? If yes and this isn't the SoT doc, replace the content with a 1-line link.
-2. **Example validation.** If the action includes a code example, identify every SoT doc the example touches (validation tags → validation doc, route pattern → auth doc, error handling → patterns doc). Read those docs and verify the example conforms. **Do not copy from existing examples in the doc being updated — they may themselves violate the SoT.**
+2. **Example validation.** If the action includes a code example, read the relevant SoT doc(s) and verify the example conforms. **Do not copy from existing examples in the doc being updated — they may themselves violate the SoT.**
 3. **Length budget** (reject if exceeded without explicit justification):
    - AGENTS.md ≤ 15 lines (pointers only, no tutorials, no examples)
    - Reference doc ≤ 150 lines
@@ -388,21 +405,23 @@ Wait for the user's response before proceeding. If the user selects option 1 or 
 - ` + "`consolidate`" + `: move content into the SoT doc; replace the original location with a single-line link.
 - ` + "`reduce`" + `: cut verbosity per the Audience and style defaults; do not add new content.
 
-After applying, output a summary of files created and modified.
+After applying, return a summary of files created and modified to the orchestrator.
 
 ---
 
-### Step 8 — Self-review
+### Step 8 — Self-review (subagent-delegated)
 
-After applying fixes, re-read each touched doc and answer:
+**Spawn a separate review subagent** that has NOT seen the writing process. Pass it only: (a) the list of files created/modified, (b) the SoT map, and (c) this single review question:
 
-1. Does any other doc now contain the same content? If yes → ` + "`consolidate`" + `.
-2. Could a senior engineer skim this doc in 60 seconds and act? If no → ` + "`reduce`" + `.
-3. Does every code example conform to the SoT docs? Spot-check validation tags, route patterns, error handling, contract sources.
-4. Are there standalone "See also" / "Related Documentation" sections that only restate top-of-doc context? Remove them.
-5. Did any AGENTS.md grow beyond the 15-line pointer contract? Trim to pointers.
+> *"If I deleted this finding or doc section, would a senior engineer still ship the same (incorrect) code on day one?"*
 
-Report any issues found and apply additional cuts before reporting done.
+The review subagent must re-read each touched file and flag anything that fails this test. Additionally check:
+
+- Does any other doc now contain the same content? If yes → apply ` + "`consolidate`" + `.
+- Did any AGENTS.md grow beyond ≤ 15 lines? If yes → trim to pointers only.
+- Does any code example contradict its SoT doc? If yes → fix or remove.
+
+Report findings and apply additional cuts before reporting done.
 `
 
 var parsedTemplate = template.Must(template.New("skill").Funcs(template.FuncMap{
