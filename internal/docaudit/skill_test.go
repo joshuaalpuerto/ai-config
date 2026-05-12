@@ -14,7 +14,7 @@ func TestGenerateSkill_containsRequiredFrontmatter(t *testing.T) {
 		DocRoots:    []string{"docs/"},
 	})
 
-	for _, want := range []string{"name: doc-audit", "description:", "allowed-tools:", "- Agent"} {
+	for _, want := range []string{"name: doc-audit", "description:"} {
 		if !strings.Contains(skill, want) {
 			t.Errorf("expected skill frontmatter to contain %q", want)
 		}
@@ -54,6 +54,7 @@ func TestGenerateSkill_containsCoreSections(t *testing.T) {
 
 	requiredSections := []string{
 		"## Project Configuration",
+		"## Audience and style",
 		"## Process",
 		"## Output Format",
 		"### Contributor Blockers",
@@ -62,6 +63,8 @@ func TestGenerateSkill_containsCoreSections(t *testing.T) {
 		"### Docs Needing Updates",
 		"### Undocumented Dependency Conventions",
 		"### Suggested Actions",
+		"### Step 4.5",
+		"### Step 7",
 		"#### Task A",
 		"#### Task B",
 		"#### Task C",

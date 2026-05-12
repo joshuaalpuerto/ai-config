@@ -39,6 +39,23 @@ The goal is not technical completeness. It is identifying where **missing or mis
 - **Analyze excludes:** {{formatList .AnalyzeExclude}}
 {{- end}}
 
+## Audience and style
+
+**Audience:** senior engineers who can capture context immediately. Write so a reader skimming a table or code block gets the answer; prose is the fallback.
+
+**Defaults:**
+
+- Lead with the table, code example, or checklist. Prose only if the structure doesn't carry the meaning.
+- Max 2 sentences of context per section before the concrete artifact.
+- One "must / always / never" per doc maximum.
+- No "Use when" columns that restate the name.
+- No tutorial framing ("This document outlines...", "It's important to understand...").
+- No standalone "See also" footer. Inline links where useful, nowhere else.
+- Code examples ≤ 15 lines; cut comments that restate the code.
+- File:line references over descriptions of file structure.
+
+**AGENTS.md contract:** AGENTS.md files are pure reading-order lists. 3–5 links with a one-line "what's here". No examples, no conventions, no explanations — those live in the SoT docs the AGENTS.md points to.
+
 ## Process
 
 Steps 1, 2, and 3 run in parallel. Wait for all three before starting Step 4.
@@ -172,6 +189,7 @@ For each **mutable** doc in the corpus, check:
 2. Does the doc's described pattern match what Task C found in actual usage? If the codebase has evolved a more specific convention → **Doc Needs Update**.
 3. Does the doc claim broad coverage in its title/intro but only address one narrow aspect? → **Doc Needs Update** (false-coverage docs are worse than missing docs).
 4. Use freshness signal as a tiebreaker: stale + hot = highest-confidence update target.
+5. **Example validation against SoT docs.** For any example in the doc, check whether it conforms to the canonical pattern documented elsewhere (validation tags, route patterns, error handling, codegen contracts). If the doc's own example contradicts a SoT doc (e.g. a route example that defines search-param defaults the BFF struct should own), flag this as a **Doc Contradiction** under Docs Needing Updates. Existing examples are evidence of past mistakes, not authority.
 
 #### 4e — Dependency conventions (Undocumented Dependency Conventions)
 
@@ -179,7 +197,23 @@ For each key dependency from Step 2 with no corresponding doc coverage — and e
 
 ---
 
-### Step 5 — Produce the gap report
+### Step 5 — Build the Single Source of Truth map
+
+Before producing the Suggested Actions table, list every cross-cutting topic from Tasks B and C and assign **one** authoritative doc to each. Other docs may reference but **never restate** content owned by the SoT doc.
+
+| Topic | SoT doc | Allowed references |
+|---|---|---|
+| Backend wrapper inventory | e.g. ` + "`BACKEND_PATTERNS.md`" + ` | ` + "`BFF.md`" + `, AGENTS.md |
+| Validation tags / contract | e.g. ` + "`BFF_VALIDATION.md`" + ` | ` + "`BACKEND_PATTERNS.md`" + ` |
+| Frontend wrapper inventory | e.g. ` + "`FRONTEND_WRAPPERS.md`" + ` | ` + "`CODE_STYLE.md`" + `, ` + "`API_DATA_FETCHING.md`" + ` |
+| Claim-based authorization | e.g. ` + "`UI_AUTHORIZATION.md`" + ` | routing docs, ` + "`SECURITY.md`" + ` |
+| ... | ... | ... |
+
+Any Suggested Action that would write content into a non-SoT doc is rejected or rewritten as "link to SoT". If two docs both have a claim on the same topic, pick one and add a ` + "`consolidate`" + ` action to move content into it.
+
+---
+
+### Step 6 — Produce the gap report
 
 Output a report using the format below. Skip sections that have no findings rather than emitting empty headers.
 
@@ -313,7 +347,10 @@ A prioritized table grouped by effort. List quick wins first (` + "`annotate sta
 |---|--------|------|--------|----------------|-----------|
 | … | … | …  | … | … | … |
 
-**Type values:** ` + "`new doc`, `update doc`, `annotate status`" + `.
+**Type values:** ` + "`new doc`, `update doc`, `annotate status`, `consolidate`, `reduce`" + `.
+
+- ` + "`consolidate`" + ` — move content from doc X into SoT doc Y; replace doc X's section with a one-line link.
+- ` + "`reduce`" + ` — cut existing verbosity without adding content. Use when a doc exceeds its length budget.
 
 **Effort values:** ` + "`trivial`" + ` (< 5 min, e.g. adding a status line), ` + "`small`" + ` (< 30 min, e.g. fixing a section), ` + "`medium`" + ` (1–2 hours, e.g. writing a new focused guide), ` + "`large`" + ` (half day+, e.g. comprehensive new doc with examples).
 
@@ -321,7 +358,7 @@ A prioritized table grouped by effort. List quick wins first (` + "`annotate sta
 
 ---
 
-### Step 6 — Offer to apply fixes
+### Step 7 — Offer to apply fixes
 
 After presenting the full gap report, ask the user:
 
@@ -333,11 +370,39 @@ After presenting the full gap report, ask the user:
 
 Wait for the user's response before proceeding. If the user selects option 1 or 2:
 
-- For each ` + "`new doc`" + ` action: create the file at the suggested path with content that addresses the identified gap. Keep docs concise and actionable — match the style of existing docs in the corpus.
-- For each ` + "`update doc`" + ` action: edit the existing file to address the divergences and omissions identified. Preserve the doc's existing structure and voice; only add or correct the specific sections that are stale or missing.
-- For each ` + "`annotate status`" + ` action: prepend the status annotation line at the top of the file (below any frontmatter).
+**Pre-write validation gate (run for every action before writing):**
+
+1. **SoT check.** Does the content belong in the SoT doc per the Step 4.5 map? If yes and this isn't the SoT doc, replace the content with a 1-line link.
+2. **Example validation.** If the action includes a code example, identify every SoT doc the example touches (validation tags → validation doc, route pattern → auth doc, error handling → patterns doc). Read those docs and verify the example conforms. **Do not copy from existing examples in the doc being updated — they may themselves violate the SoT.**
+3. **Length budget** (reject if exceeded without explicit justification):
+   - AGENTS.md ≤ 15 lines (pointers only, no tutorials, no examples)
+   - Reference doc ≤ 150 lines
+   - New focused guide ≤ 100 lines
+   - Section in existing doc ≤ 30 lines
+
+**Then write:**
+
+- ` + "`new doc`" + `: create the file at the suggested path. Apply the Audience and style defaults.
+- ` + "`update doc`" + `: edit the existing file to address the divergences and omissions identified. Preserve the doc's existing structure and voice; only add or correct the specific sections that are stale or missing.
+- ` + "`annotate status`" + `: prepend the status annotation line at the top of the file (below any frontmatter).
+- ` + "`consolidate`" + `: move content into the SoT doc; replace the original location with a single-line link.
+- ` + "`reduce`" + `: cut verbosity per the Audience and style defaults; do not add new content.
 
 After applying, output a summary of files created and modified.
+
+---
+
+### Step 8 — Self-review
+
+After applying fixes, re-read each touched doc and answer:
+
+1. Does any other doc now contain the same content? If yes → ` + "`consolidate`" + `.
+2. Could a senior engineer skim this doc in 60 seconds and act? If no → ` + "`reduce`" + `.
+3. Does every code example conform to the SoT docs? Spot-check validation tags, route patterns, error handling, contract sources.
+4. Are there standalone "See also" / "Related Documentation" sections that only restate top-of-doc context? Remove them.
+5. Did any AGENTS.md grow beyond the 15-line pointer contract? Trim to pointers.
+
+Report any issues found and apply additional cuts before reporting done.
 `
 
 var parsedTemplate = template.Must(template.New("skill").Funcs(template.FuncMap{
