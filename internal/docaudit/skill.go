@@ -62,6 +62,8 @@ Steps 1, 2, and 3 run in parallel. Wait for all three before starting Step 4.
 
 **Severity gate (applies to every finding in Steps 4–5):** Before including any finding, answer: *"What does a contributor get wrong in week 1 if this is missing?"* If the answer is hypothetical ("a contributor *might*…"), already prevented by tooling (type system, lint rule, CI), or covered by an existing doc/config — drop it.
 
+**Zero-findings outcome:** If every candidate finding is dropped by the severity gate, report that explicitly — state that no contributor-blocking gaps were found, and end the audit. Do not invent findings to fill the report.
+
 **Report cap:** No more than 5 findings per category. If more exist, include only the top 5 ranked by severity (= likelihood × impact of a real mistake). State the total count and note that lower-severity items were omitted.
 
 **Category precedence:** A finding appears in exactly one category. If it qualifies for multiple, assign it to the highest-severity one: Contributor Blocker > Complexity Trap > Undocumented Contract > Docs Needing Updates > Undocumented Dependency Convention > Superseded Records.
@@ -204,10 +206,12 @@ Using Task A's coverage map, Task B's wrappers, Task C's patterns, **and the SoT
 
 For each **mutable** doc in the corpus, check — but only include as "Doc Needs Update" if a contributor following the doc as-is would produce **incorrect output** (not merely incomplete):
 
+> **Not doc problems:** cosmetic-accuracy items — approximate counts ("~80 hooks" when the real number is 36), outdated statistics, version badge numbers, line-count claims — do not change contributor behavior. Do not flag them.
+
 1. Does the doc cover a library for which Task B found a project wrapper, without naming the wrapper? Only flag if there are concrete ` + "`file:line`" + ` offenders importing the raw library in feature code.
 2. Does the doc's described pattern contradict what Task C found in actual usage? Only flag if the divergence would cause a build failure, test failure, or review rejection.
 3. Does the doc claim broad coverage but only address one narrow aspect? Only flag if the false coverage leads to a wrong assumption that causes breakage.
-4. **Example validation against the SoT map (from 4d).** For any example in the doc, verify it conforms to the canonical pattern in the SoT doc for that topic. Flag as **Doc Contradiction** only if the example would produce code that violates a documented contract.
+4. **Example validation against the SoT map (from 4d).** For any example in the doc, verify it conforms to the canonical **pattern** in the SoT doc for that topic (import shape, error handling, hook composition, data flow). Flag as **Doc Contradiction** only if the example teaches a wrong pattern that produces silently incorrect behavior. Do NOT flag cosmetic mismatches (renamed symbols, moved import paths) that the compiler or type system would catch — those are not doc problems.
 
 Use freshness signal (staleness data from Step 1) as a tiebreaker when ranking findings, not as a standalone trigger.
 
@@ -228,142 +232,56 @@ Output a report using the format below. Skip sections that have no findings rath
 
 ## Output Format
 
-Start with a summary block, then the detailed sections.
+A single table of actions, each carrying its own evidence. The reader should be able to accept, reject, or defer every row without reading anything else.
 
 ### Summary
-
-A compact overview so the reader immediately knows the scope. Use this exact structure:
 
 ` + "```" + `
 ## Summary
 
+**Headline:** <one sentence describing the single most impactful gap>
+
 | Category | Count |
 |----------|-------|
-| Contributor Blockers | N |
-| Undocumented Contracts | N |
-| Complexity Traps | N |
-| Docs Needing Updates | N |
-| Superseded Records | N |
-| Undocumented Dependency Conventions | N |
+| Contributor Blocker | N |
+| Undocumented Contract | N |
+| Complexity Trap | N |
+| Doc Needs Update | N |
+| Superseded Record | N |
+| Undocumented Dep Convention | N |
 
-**Headline:** <one sentence describing the single most impactful gap>
+Total actions: N (capped at 5 per category; M lower-severity items omitted)
 ` + "```" + `
 
 ---
 
-### Contributor Blockers
+### Actions
 
-Use this structure per finding:
+**One finding per row.** Each action must address exactly one gap. Do not bundle unrelated fixes into a single row — split them so each can be accepted or rejected independently.
+
+For each action, use this structure:
 
 ` + "```" + `
-#### <N>. <Cluster / directory name>
+#### <N>. <short description>
 
 | Field | Value |
 |-------|-------|
-| Files | <directly-editable files in this cluster> |
-| Gap | <what a contributor needs to know to work here safely — 1–2 sentences max> |
-| Suggested doc | <path to create> |
-| Rationale | <one line: what goes wrong without this> |
+| Category | <Contributor Blocker / Undocumented Contract / Complexity Trap / Doc Needs Update / Superseded Record / Undocumented Dep Convention> |
+| Target | <file path to create or update> |
+| Type | <` + "`new doc`" + ` / ` + "`update doc`" + ` / ` + "`annotate status`" + ` / ` + "`consolidate`" + ` / ` + "`reduce`" + `> |
+| Effort | <` + "`trivial`" + ` / ` + "`small`" + ` / ` + "`medium`" + ` / ` + "`large`" + `> |
+| Evidence | <bullet list of file:line references proving the gap exists> |
+| What breaks | <one sentence: what a contributor gets wrong without this — must be concrete, not hypothetical> |
 ` + "```" + `
 
-After the table, optionally include a bullet list of specific wrappers, components, or conventions (max 8 items) — one line each, no prose.
+**Effort values:** ` + "`trivial`" + ` (< 5 min, e.g. adding a status line), ` + "`small`" + ` (< 30 min, e.g. fixing a section), ` + "`medium`" + ` (1–2 hours, e.g. writing a new focused guide), ` + "`large`" + ` (half day+, e.g. comprehensive new doc with examples).
 
----
-
-### Undocumented Contracts
-
-` + "```" + `
-#### <N>. <file path>
-
-| Field | Value |
-|-------|-------|
-| Contract | <what it defines — interface, format, wiring sequence> |
-| Must-know | <the specific steps or rules contributors must follow — brief> |
-| Suggested target | <doc path to update or create> |
-| Rationale | <what breaks if ignored — one line> |
-` + "```" + `
-
----
-
-### Complexity Traps
-
-` + "```" + `
-#### <N>. <file path> (<churn>× churn, <lines> lines)
-
-| Field | Value |
-|-------|-------|
-| Pitfall | <the non-obvious behavior, edge case, or ordering rule — 1–2 sentences> |
-| Risk | <what a contributor gets wrong without this context> |
-| Suggested target | <doc path> |
-` + "```" + `
-
----
-
-### Docs Needing Updates
-
-` + "```" + `
-#### <N>. <doc file path> (<age> days old)
-
-| Field | Value |
-|-------|-------|
-| Covers | <what the doc correctly describes — brief> |
-| Divergences | <bullet list of specific mismatches with file:line evidence> |
-| Omits | <what the doc should cover but doesn't> |
-| Rationale | <what a contributor gets wrong by following the doc as-is — one line> |
-` + "```" + `
-
-Keep each divergence to one line with a ` + "`file:line`" + ` reference. Use a bullet list, not a paragraph.
-
----
-
-### Superseded Records
-
-` + "```" + `
-#### <N>. <file path>
-
-| Field | Value |
-|-------|-------|
-| Records | <the original decision — one line> |
-| Superseded by | <newer ADR/RFC number or current pattern> |
-| Evidence | <file:line showing the codebase no longer follows this decision> |
-| Suggested annotation | "Status: Superseded by <X>" |
-` + "```" + `
-
-Do NOT suggest content edits to ADRs/RFCs — only a status annotation at the top of the file.
-
----
-
-### Undocumented Dependency Conventions
-
-` + "```" + `
-#### <N>. <library name>
-
-| Field | Value |
-|-------|-------|
-| Convention | <what the library imposes on contributors — one line> |
-| Wrapper | <path> (documented: yes/no) |
-| Misuse risk | <what a contributor does wrong without guidance — one line> |
-| Suggested target | <doc path> |
-` + "```" + `
-
----
-
-### Suggested Actions
-
-A prioritized table grouped by effort. List quick wins first (` + "`annotate status`" + `), then updates, then new docs. Each row must include **type**, **effort**, and **target surface**.
-
-| # | Action | Type | Effort | Target surface | Rationale |
-|---|--------|------|--------|----------------|-----------|
-| … | … | …  | … | … | … |
-
-**Type values:** ` + "`new doc`, `update doc`, `annotate status`, `consolidate`, `reduce`" + `.
+**Type definitions:**
 
 - ` + "`consolidate`" + ` — move content from doc X into SoT doc Y; replace doc X's section with a one-line link.
 - ` + "`reduce`" + ` — cut existing verbosity without adding content. Use when a doc exceeds its length budget.
 
-**Effort values:** ` + "`trivial`" + ` (< 5 min, e.g. adding a status line), ` + "`small`" + ` (< 30 min, e.g. fixing a section), ` + "`medium`" + ` (1–2 hours, e.g. writing a new focused guide), ` + "`large`" + ` (half day+, e.g. comprehensive new doc with examples).
-
-**Target surface values:** the path the change lands in (any path under the configured doc corpus, e.g. ` + "`docs/`, `README.md`, `.claude/rules/`, `.github/instructions/`, `CLAUDE.md`, `AGENTS.md`" + `).
+Order by severity (highest first), then by effort (cheapest first within same severity).
 
 ---
 
