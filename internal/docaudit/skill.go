@@ -27,9 +27,34 @@ description: Surface contributor-enablement gaps in {{.ProjectName}} — missing
 
 # Doc Audit: {{.ProjectName}}
 
-Surface actionable items — new docs or doc updates — that would block a new contributor (human or AI) from producing convention-adherent contributions on day one. Treat any AI-assistance configuration listed in the doc corpus (e.g. ` + "`CLAUDE.md`, `AGENTS.md`, rules, skills, instructions" + `) as documentation for the purposes of this audit.
+Surface actionable gaps — new docs or doc updates — that would cause a new contributor (human or AI) to produce wrong, broken, or off-pattern output on day one. AI-assistance configuration in the doc corpus (` + "`CLAUDE.md`, `AGENTS.md`, rules, skills, instructions" + `) counts as documentation.
 
-The goal is not technical completeness. It is identifying where **missing or misleading guidance would cause someone to produce wrong, broken, or off-pattern output** — and proposing the smallest concrete artifact (a new doc or a doc update) that closes the gap.
+## Core Principles
+
+These three principles govern the entire audit. Every finding, task, and output must satisfy all three. They are referenced by name throughout.
+
+**Code-first principle:** Document what is hard to discover from code. Never duplicate what is obvious from reading 2–3 files in the relevant area. High-leverage: architecture decisions (why), cross-cutting constraints, failure modes, contracts between systems. Low-leverage (avoid): implementation walkthroughs, pattern inventories, rapidly-changing details. Test: *"Will this doc still be correct in 6 months without maintenance?"*
+
+**Severity gate:** Before including ANY finding, answer all three — drop if any triggers:
+
+1. *"What goes wrong in week 1 without this?"* — Drop if hypothetical, prevented by tooling (types, lint, CI), or already documented.
+2. *"Discoverable from 2–3 existing files?"* — Drop if the convention is visible in code patterns, tests, or module structure.
+3. *"Will it drift within 3 months?"* — Drop if it tracks volatile implementation details. Prefer stable constraints.
+
+**Concrete-breakage rule:** Only flag wrappers, conventions, and doc gaps where bypassing/ignoring them causes build failures, security holes, data corruption, or review rejection — not style inconsistency.
+
+## Constraints
+
+| Constraint | Value |
+|-----------|-------|
+| Max findings per category | 3 (state total, note omissions) |
+| Category precedence | Contributor Blocker > Complexity Trap > Undocumented Contract > Docs Needing Updates > Undocumented Dep Convention > Superseded Records |
+| AGENTS.md max lines | 15 (pointers only — no examples, conventions, or explanations) |
+| Reference doc max lines | 150 |
+| New focused guide max lines | 100 |
+| Section in existing doc max lines | 30 |
+| Code examples max lines | 15 (cut comments that restate the code) |
+| Zero findings | Report explicitly and end. Do not invent findings. |
 
 ## Project Configuration
 
@@ -41,205 +66,144 @@ The goal is not technical completeness. It is identifying where **missing or mis
 
 ## Audience and style
 
-**Audience:** senior engineers who can capture context immediately. Write so a reader skimming a table or code block gets the answer; prose is the fallback.
+**Audience:** senior engineers. Lead with tables, code blocks, or checklists. Prose is the fallback.
 
-**Defaults:**
-
-- Lead with the table, code example, or checklist. Prose only if the structure doesn't carry the meaning.
-- Max 2 sentences of context per section before the concrete artifact.
+- Max 2 sentences of context per section before the artifact.
 - One "must / always / never" per doc maximum.
-- No "Use when" columns that restate the name.
-- No tutorial framing ("This document outlines...", "It's important to understand...").
-- No standalone "See also" footer. Inline links where useful, nowhere else.
-- Code examples ≤ 15 lines; cut comments that restate the code.
+- No tutorial framing, no "See also" footers, no "Use when" columns that restate the name.
 - File:line references over descriptions of file structure.
-
-**AGENTS.md contract:** AGENTS.md files are pure reading-order lists. 3–5 links with a one-line "what's here". No examples, no conventions, no explanations — those live in the SoT docs the AGENTS.md points to.
 
 ## Process
 
-Steps 1, 2, and 3 run in parallel. Wait for all three before starting Step 4.
-
-**Severity gate (applies to every finding in Steps 4–5):** Before including any finding, answer: *"What does a contributor get wrong in week 1 if this is missing?"* If the answer is hypothetical ("a contributor *might*…"), already prevented by tooling (type system, lint rule, CI), or covered by an existing doc/config — drop it.
-
-**Zero-findings outcome:** If every candidate finding is dropped by the severity gate, report that explicitly — state that no contributor-blocking gaps were found, and end the audit. Do not invent findings to fill the report.
-
-**Report cap:** No more than 5 findings per category. If more exist, include only the top 5 ranked by severity (= likelihood × impact of a real mistake). State the total count and note that lower-severity items were omitted.
-
-**Category precedence:** A finding appears in exactly one category. If it qualifies for multiple, assign it to the highest-severity one: Contributor Blocker > Complexity Trap > Undocumented Contract > Docs Needing Updates > Undocumented Dependency Convention > Superseded Records.
+Steps 1, 2, and 3 run **in parallel**. Wait for all three before Step 4.
 
 ---
 
 ### Step 1 — Run static analysis
-
-Run both commands and read the full output of each:
 
 ` + "```bash" + `
 aicfg analyze {{.TargetDir}}
 aicfg analyze {{.TargetDir}} --kind=doc
 ` + "```" + `
 
-The first reports hub files, hotspots, and clusters — your primary inputs for the cross-reference in Step 4. The second reports each doc file's last-updated date and how many days have passed; this is **input to Task A** (used to prioritize which docs get a deep read), not a standalone output.
+First command → hub files, hotspots, clusters (input to Step 4). Second command → doc staleness dates (input to Task A).
 
 ---
 
 ### Step 2 — Read documentation and dependency manifests
 
-Glob and read every file under the configured doc corpus. Then read the dependency manifest(s) for this project's ecosystem(s):
+Read every file under the doc corpus. Then read dependency manifests:
 
-| Ecosystem | Files to read |
-|-----------|---------------|
-| JavaScript / TypeScript | ` + "`package.json`" + ` |
+| Ecosystem | Manifest |
+|-----------|----------|
+| JS / TS | ` + "`package.json`" + ` |
 | Go | ` + "`go.mod`" + ` |
 | Ruby | ` + "`Gemfile`" + ` |
 | Elixir | ` + "`mix.exs`" + ` |
-| Python | ` + "`requirements.txt`, `pyproject.toml`, `Pipfile`" + ` |
+| Python | ` + "`requirements.txt`" + `, ` + "`pyproject.toml`" + `, ` + "`Pipfile`" + ` |
 | Rust | ` + "`Cargo.toml`" + ` |
-| Java / Kotlin | ` + "`pom.xml`, `build.gradle`" + ` |
+| Java / Kotlin | ` + "`pom.xml`" + `, ` + "`build.gradle`" + ` |
 | PHP | ` + "`composer.json`" + ` |
-| .NET | ` + "`*.csproj`, `*.fsproj`" + ` |
+| .NET | ` + "`*.csproj`" + `, ` + "`*.fsproj`" + ` |
 
-For each dependency, ask:
-
-- Does it impose conventions a contributor must follow (routing, state management, ORM style, test structure)?
-- Are those conventions documented anywhere in the doc corpus?
-- Does the project have a **wrapper or abstraction** around it? (See Task B.)
-
-> **Wrapper signal:** An undocumented project wrapper is a higher-priority signal than an undocumented raw library — but only report it if you find concrete ` + "`file:line`" + ` evidence of feature code importing the raw library instead of the wrapper.
+For each major dependency (skip stdlib/utility), check: non-obvious conventions not discoverable from existing usage? Wrapper where bypassing causes concrete breakage? (→ Task B)
 
 ---
 
 ### Step 3 — Spawn parallel research tasks
 
-Spawn the three tasks below **concurrently** with Steps 1 and 2. Use whichever subagent the project provides for general-purpose codebase exploration (or the most specialized agent available for each task). Do **not** assume any specific agent name exists — pick the best available.
-
-Each task is independent. Each must return concrete findings with ` + "`file:line`" + ` references — not summaries.
-
----
+Spawn Tasks A, B, C concurrently using the best available subagent. Each is independent and must return concrete findings with ` + "`file:line`" + ` references.
 
 #### Task A — Documentation coverage map
 
-**Input:** every file under the doc corpus, plus the staleness output from ` + "`aicfg analyze --kind=doc`" + `.
+**Goal:** For each doc file, return claims (entities covered), omissions (hard-to-discover knowledge missing — apply code-first principle), and freshness signal from ` + "`aicfg analyze --kind=doc`" + `.
 
-**Goal:** for each doc file, return:
+**Priority:** Docs older than ~90 days covering hub/hotspot areas get deeper code comparison with ` + "`file:line`" + ` divergence evidence.
 
-1. **Claims:** which code-level entities the doc says it covers (libraries, components, hooks, patterns, workflows, services).
-2. **Omissions:** what a reader following this doc would *not* know that they need to know.
-3. **Freshness signal:** last-updated date and days-since-update from the staleness report.
-
-**Prioritization:** docs that are **older than ~90 days AND cover hub/hotspot areas** from Step 1 get a deeper comparison against current code. For these, include specific divergences with ` + "`file:line`" + ` evidence.
-
-**Return format (per doc):**
+**Return format:**
 ` + "```" + `
-<path>: covers [<entities>]; omits [<entities>]; last-updated <date> (<n> days). Specific divergences: <file:line — what the doc says vs. what code does>.
+<path>: covers [<entities>]; omits [<entities>]; last-updated <date> (<n> days). Specific divergences: <file:line — doc vs. code>.
 ` + "```" + `
 
-Do not return raw doc content — only synthesized findings.
+#### Task B — Critical wrapper discovery
 
----
+**Goal:** Find project wrappers where bypassing causes concrete breakage (apply concrete-breakage rule). For each, return: wrapper name/path/library, what breaks, ` + "`file:line`" + ` bypass evidence.
 
-#### Task B — Project wrappers and convention discovery
+#### Task C — Hard-to-discover convention survey
 
-**Goal:** find **project-level abstractions** wrapping third-party dependencies — components wrapping a UI library, hooks wrapping a data-fetching library, helpers wrapping date/number/string libraries, façades over HTTP clients, generated-code adapters, etc.
+**Goal:** Survey conventions invisible to static analysis AND not discoverable from 2–3 files (apply code-first principle + severity gate). Focus areas:
 
-For each wrapper found, return:
+- **Code generation** — what is generated, from what, how to regenerate
+- **Authorization / security** — permission checks, contract for new permissions
+- **Error handling contracts** — domain-to-transport translation, user-facing vs internal boundaries
+- **Operational procedures** — deploy, migrate, rollback steps not in CI/scripts
 
-- Wrapper name and file path
-- The library it wraps
-- Approximate fan-in (how many feature files import it directly)
-- Whether contributors should always prefer the wrapper over the raw library (yes/no, with reason)
-- A short usage snippet with ` + "`file:line`" + ` reference
-
-Also surface **how key dependencies from the manifest are actually used** in the codebase — concrete code snippets with ` + "`file:line`" + ` references for the most-imported third-party libraries.
-
----
-
-#### Task C — Pattern survey (medium thoroughness)
-
-**Goal:** survey conventions that static analysis cannot see. Spend effort proportional to project size on the following categories — adapt to what the project actually has:
-
-- **Test conventions:** fixtures, mocking strategy, test data factories, integration vs unit boundaries.
-- **DI / wiring patterns:** how new handlers, services, routes, or commands are registered.
-- **Configuration patterns:** how new env vars, feature flags, or external service configs are added.
-- **Error handling:** project-level error types, translation layers (e.g. domain → transport), user-facing vs internal errors.
-- **Code generation:** what is generated, from what source, and how to regenerate.
-- **Authorization / security:** how permissions are checked, where the contract for new permissions lives.
-
-Return concrete findings with ` + "`file:line`" + ` references. Skip categories that don't apply.
+Skip categories where code reveals the pattern. Return ` + "`file:line`" + ` references. Skip non-applicable categories.
 
 ---
 
 ### Step 4 — Cross-reference
 
-The guiding question for every check: *"If a new contributor starts working in this area today, would they have enough context to make a correct change without breaking something?"*
+Guiding question: *"Would a new contributor have enough context to make a correct change without breaking something?"*
 
-Apply the severity gate to each candidate finding before including it.
+Apply the **severity gate** to every candidate finding.
 
-#### 4a — Clusters (Contributor Blockers)
+#### 4a — Clusters → Contributor Blockers
 
-For each cluster from Step 1: does it contain files contributors directly author or edit? If yes and there is no doc explaining the authoring conventions → **Contributor Blocker**. Skip clusters that are pure internal implementation or that have no contributor-facing contract.
+For each cluster with contributor-authored files: is there undocumented authoring knowledge that requires non-obvious context (ordering constraints, compatibility rules, cross-system side effects)? If self-documenting from existing files → drop.
 
-#### 4b — Hub files (Undocumented Contracts)
+#### 4b — Hub files → Undocumented Contracts
 
-For each hub file: does it define a contract, format, or interface contributors must follow? If yes and there is no accessible doc covering it → **Undocumented Contract**. Skip hub files that are pure wiring nexuses with no contributor-facing contract (e.g. a DI container that contributors never edit directly).
+Hub file defines a contributor-facing contract/format/interface with no doc? → **Undocumented Contract**. Skip pure wiring nexuses.
 
-#### 4c — Hotspots (Complexity Traps)
+#### 4c — Hotspots → Complexity Traps
 
-For each hotspot: does its high churn and size suggest non-obvious complexity (ordering rules, edge cases, platform differences, pitfalls)? If yes and there is no guidance → **Complexity Trap**.
+High-churn + large file with non-obvious complexity (ordering rules, edge cases, pitfalls) and no guidance? → **Complexity Trap**.
 
-#### 4d — Build the Single Source of Truth map
+#### 4d — Build the Single Source of Truth (SoT) map
 
-Before evaluating doc completeness, list every cross-cutting topic from Tasks B and C and assign **one** authoritative doc to each. Other docs may reference but **never restate** content owned by the SoT doc. Cap at 8 rows maximum — only topics with multiple competing docs need an entry.
+Assign one authoritative doc per cross-cutting topic from Tasks B and C. Cap at 8 rows — only topics with multiple competing docs.
 
 | Topic | SoT doc | Allowed references |
 |---|---|---|
-| (example) Backend wrapper inventory | e.g. ` + "`BACKEND_PATTERNS.md`" + ` | ` + "`BFF.md`" + `, AGENTS.md |
-| ... | ... | ... |
 
-Any Suggested Action that would write content into a non-SoT doc is rejected or rewritten as "link to SoT". If two docs both have a claim on the same topic, pick one and add a ` + "`consolidate`" + ` action to move content into it.
+Actions writing into non-SoT docs → reject or rewrite as "link to SoT". Two docs claiming same topic → pick one, add ` + "`consolidate`" + ` action.
 
-#### 4e — Existing doc completeness (Docs Needing Updates)
+#### 4e — Doc completeness → Docs Needing Updates
 
-Using Task A's coverage map, Task B's wrappers, Task C's patterns, **and the SoT map from 4d**:
+Using Tasks A/B/C and the SoT map:
 
-> **Immutable-document rule:** ADRs, RFCs, design docs, postmortems, and migration guides are point-in-time records. **Never flag them as "Docs Needing Updates."** If an ADR/RFC describes a decision that current code has superseded, report it under **Superseded Records** — the only valid action is adding a status annotation (e.g. "Status: Superseded by ADR-XXX") at the top of the file. Detect these by path pattern (e.g. ` + "`ADR/`, `RFC/`, `adr-`, `rfc-`" + `) or by title/heading conventions.
+**Immutable-document rule:** ADRs, RFCs, design docs, postmortems are point-in-time records. Never flag as "Docs Needing Updates." If superseded → report under **Superseded Records** with a status annotation action. Detect by path pattern (` + "`ADR/`, `RFC/`, `adr-`, `rfc-`" + `) or heading conventions.
 
-For each **mutable** doc in the corpus, check — but only include as "Doc Needs Update" if a contributor following the doc as-is would produce **incorrect output** (not merely incomplete):
+For each mutable doc, flag as "Doc Needs Update" only if following it produces **incorrect output**:
 
-> **Not doc problems:** cosmetic-accuracy items — approximate counts ("~80 hooks" when the real number is 36), outdated statistics, version badge numbers, line-count claims — do not change contributor behavior. Do not flag them.
+1. Doc covers a library with an undocumented wrapper (Task B) + ` + "`file:line`" + ` offenders exist
+2. Doc's pattern contradicts actual usage (Task C) causing build/test/review failure
+3. Doc claims broad coverage but covers one narrow aspect, leading to wrong assumptions
+4. Doc example contradicts SoT pattern producing silently incorrect behavior (not cosmetic mismatches caught by compiler)
 
-1. Does the doc cover a library for which Task B found a project wrapper, without naming the wrapper? Only flag if there are concrete ` + "`file:line`" + ` offenders importing the raw library in feature code.
-2. Does the doc's described pattern contradict what Task C found in actual usage? Only flag if the divergence would cause a build failure, test failure, or review rejection.
-3. Does the doc claim broad coverage but only address one narrow aspect? Only flag if the false coverage leads to a wrong assumption that causes breakage.
-4. **Example validation against the SoT map (from 4d).** For any example in the doc, verify it conforms to the canonical **pattern** in the SoT doc for that topic (import shape, error handling, hook composition, data flow). Flag as **Doc Contradiction** only if the example teaches a wrong pattern that produces silently incorrect behavior. Do NOT flag cosmetic mismatches (renamed symbols, moved import paths) that the compiler or type system would catch — those are not doc problems.
+Cosmetic-accuracy items (approximate counts, version badges, line-count claims) are not doc problems. Use staleness as a tiebreaker only.
 
-Use freshness signal (staleness data from Step 1) as a tiebreaker when ranking findings, not as a standalone trigger.
+#### 4f — Dependency conventions
 
-#### 4f — Dependency conventions (Undocumented Dependency Conventions)
-
-Report a dependency convention only when **both** conditions are met:
-
-1. A project wrapper exists (from Task B) that contributors should use instead of the raw library, AND
-2. There are concrete ` + "`file:line`" + ` offenders in feature code that import the raw library directly.
-
-Do **not** produce entries for dependencies that are used correctly or have no wrapper.
+Report only when: (1) wrapper exists (Task B) AND (2) ` + "`file:line`" + ` offenders import raw library in feature code.
 
 ---
 
 ### Step 5 — Produce the gap report
 
-Output a report using the format below. Skip sections that have no findings rather than emitting empty headers.
+Skip sections with no findings.
 
 ## Output Format
 
-A single table of actions, each carrying its own evidence. The reader should be able to accept, reject, or defer every row without reading anything else.
+Each action is self-contained — the reader can accept, reject, or defer every row independently.
 
 ### Summary
 
 ` + "```" + `
 ## Summary
 
-**Headline:** <one sentence describing the single most impactful gap>
+**Headline:** <one sentence: single most impactful gap>
 
 | Category | Count |
 |----------|-------|
@@ -250,16 +214,12 @@ A single table of actions, each carrying its own evidence. The reader should be 
 | Superseded Record | N |
 | Undocumented Dep Convention | N |
 
-Total actions: N (capped at 5 per category; M lower-severity items omitted)
+Total actions: N (capped at 3 per category; M lower-severity items omitted)
 ` + "```" + `
-
----
 
 ### Actions
 
-**One finding per row.** Each action must address exactly one gap. Do not bundle unrelated fixes into a single row — split them so each can be accepted or rejected independently.
-
-For each action, use this structure:
+One finding per row. Order by severity (highest first), then effort (cheapest first).
 
 ` + "```" + `
 #### <N>. <short description>
@@ -268,76 +228,55 @@ For each action, use this structure:
 |-------|-------|
 | Category | <Contributor Blocker / Undocumented Contract / Complexity Trap / Doc Needs Update / Superseded Record / Undocumented Dep Convention> |
 | Target | <file path to create or update> |
-| Type | <` + "`new doc`" + ` / ` + "`update doc`" + ` / ` + "`annotate status`" + ` / ` + "`consolidate`" + ` / ` + "`reduce`" + `> |
-| Effort | <` + "`trivial`" + ` / ` + "`small`" + ` / ` + "`medium`" + ` / ` + "`large`" + `> |
-| Evidence | <bullet list of file:line references proving the gap exists> |
-| What breaks | <one sentence: what a contributor gets wrong without this — must be concrete, not hypothetical> |
+| Type | <new doc / update doc / annotate status / consolidate / reduce> |
+| Effort | <trivial (<5 min) / small (<30 min) / medium (1–2 h) / large (half day+)> |
+| Evidence | <bullet list of file:line references> |
+| What breaks | <one concrete sentence> |
+| Drift risk | <low / medium / high> — reject high unless breakage is critical |
 ` + "```" + `
 
-**Effort values:** ` + "`trivial`" + ` (< 5 min, e.g. adding a status line), ` + "`small`" + ` (< 30 min, e.g. fixing a section), ` + "`medium`" + ` (1–2 hours, e.g. writing a new focused guide), ` + "`large`" + ` (half day+, e.g. comprehensive new doc with examples).
-
-**Type definitions:**
-
-- ` + "`consolidate`" + ` — move content from doc X into SoT doc Y; replace doc X's section with a one-line link.
-- ` + "`reduce`" + ` — cut existing verbosity without adding content. Use when a doc exceeds its length budget.
-
-Order by severity (highest first), then by effort (cheapest first within same severity).
+**Type definitions:** ` + "`consolidate`" + ` — move content to SoT doc, replace original with link. ` + "`reduce`" + ` — cut verbosity, add nothing.
 
 ---
 
-### Step 6 — Offer to apply fixes
+## Phase 2 — Apply Fixes
 
-After presenting the full gap report, ask the user:
+### Step 6 — Offer to apply
 
-> Would you like me to apply these fixes now? I can:
->
-> 1. **Apply all** — create new docs and update existing ones for every item in the Suggested Actions table.
-> 2. **Apply selected** — let you pick which actions to apply (by number from the table).
-> 3. **Skip** — end the audit here; no files will be created or modified.
+> Would you like me to apply these fixes now?
+> 1. **Apply all** — every action in the table.
+> 2. **Apply selected** — pick by number.
+> 3. **Skip** — end here, no files changed.
 
-Wait for the user's response before proceeding. If the user selects option 1 or 2, proceed to Step 7.
+Wait for response. Proceed to Step 7 on option 1 or 2.
 
----
+### Step 7 — Write (subagent-delegated)
 
-### Step 7 — Apply fixes (subagent-delegated)
+Spawn a fresh writing subagent with: (a) Suggested Actions table, (b) SoT map from 4d, (c) Audience and style defaults.
 
-**Spawn a fresh subagent** for writing. The orchestrator must NOT write docs itself — delegate to a subagent that receives only: (a) the Suggested Actions table, (b) the SoT map from Step 4d, and (c) the Audience and style defaults. This prevents context fatigue from corrupting output quality.
+**Pre-write validation per action:**
 
-**Instructions for the writing subagent:**
+1. **SoT check** — belongs in SoT doc per map? If this isn't the SoT doc → replace with 1-line link.
+2. **Example validation** — verify against SoT doc. Do not copy existing examples (they may violate SoT).
+3. **Length budget** — enforce limits from Constraints table.
 
-For each action, run the pre-write validation gate before writing:
+**Action types:** ` + "`new doc`" + ` → create at suggested path. ` + "`update doc`" + ` → edit, preserve structure/voice. ` + "`annotate status`" + ` → prepend status line below frontmatter. ` + "`consolidate`" + ` → move to SoT, replace with link. ` + "`reduce`" + ` → cut verbosity, add nothing.
 
-1. **SoT check.** Does the content belong in the SoT doc per the Step 4.5 map? If yes and this isn't the SoT doc, replace the content with a 1-line link.
-2. **Example validation.** If the action includes a code example, read the relevant SoT doc(s) and verify the example conforms. **Do not copy from existing examples in the doc being updated — they may themselves violate the SoT.**
-3. **Length budget** (reject if exceeded without explicit justification):
-   - AGENTS.md ≤ 15 lines (pointers only, no tutorials, no examples)
-   - Reference doc ≤ 150 lines
-   - New focused guide ≤ 100 lines
-   - Section in existing doc ≤ 30 lines
+Return summary of files created/modified.
 
-**Then write:**
+### Step 8 — Review (subagent-delegated)
 
-- ` + "`new doc`" + `: create the file at the suggested path. Apply the Audience and style defaults.
-- ` + "`update doc`" + `: edit the existing file to address the divergences and omissions identified. Preserve the doc's existing structure and voice; only add or correct the specific sections that are stale or missing.
-- ` + "`annotate status`" + `: prepend the status annotation line at the top of the file (below any frontmatter).
-- ` + "`consolidate`" + `: move content into the SoT doc; replace the original location with a single-line link.
-- ` + "`reduce`" + `: cut verbosity per the Audience and style defaults; do not add new content.
+Spawn a separate review subagent (not the writer). Pass: (a) files created/modified, (b) SoT map, (c) this test:
 
-After applying, return a summary of files created and modified to the orchestrator.
+> *"If I deleted this finding or doc section, would a senior engineer still ship incorrect code on day one?"*
 
----
+Additionally verify:
 
-### Step 8 — Self-review (subagent-delegated)
-
-**Spawn a separate review subagent** that has NOT seen the writing process. Pass it only: (a) the list of files created/modified, (b) the SoT map, and (c) this single review question:
-
-> *"If I deleted this finding or doc section, would a senior engineer still ship the same (incorrect) code on day one?"*
-
-The review subagent must re-read each touched file and flag anything that fails this test. Additionally check:
-
-- Does any other doc now contain the same content? If yes → apply ` + "`consolidate`" + `.
-- Did any AGENTS.md grow beyond ≤ 15 lines? If yes → trim to pointers only.
-- Does any code example contradict its SoT doc? If yes → fix or remove.
+- No duplicate content across docs (→ ` + "`consolidate`" + `)
+- AGENTS.md ≤ 15 lines
+- Examples match SoT
+- No content obvious from reading the code it describes (→ delete)
+- No volatile implementation details that drift within months (→ remove unless critical)
 
 Report findings and apply additional cuts before reporting done.
 `

@@ -62,6 +62,7 @@ func TestGenerateSkill_containsCoreSections(t *testing.T) {
 		"| Category |",
 		"| Evidence |",
 		"| What breaks |",
+		"| Drift risk |",
 		"#### 4d",
 		"### Step 7",
 		"#### Task A",
