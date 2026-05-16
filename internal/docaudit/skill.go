@@ -224,15 +224,9 @@ One finding per row. Order by severity (highest first), then effort (cheapest fi
 ` + "```" + `
 #### <N>. <short description>
 
-| Field | Value |
-|-------|-------|
-| Category | <Contributor Blocker / Undocumented Contract / Complexity Trap / Doc Needs Update / Superseded Record / Undocumented Dep Convention> |
-| Target | <file path to create or update> |
-| Type | <new doc / update doc / annotate status / consolidate / reduce> |
-| Effort | <trivial (<5 min) / small (<30 min) / medium (1–2 h) / large (half day+)> |
-| Evidence | <bullet list of file:line references> |
-| What breaks | <one concrete sentence> |
-| Drift risk | <low / medium / high> — reject high unless breakage is critical |
+| Category | Target | Type | Evidence | What breaks | Drift risk |
+|----------|--------|------|----------|-------------|------------|
+| <Contributor Blocker / Undocumented Contract / Complexity Trap / Doc Needs Update / Superseded Record / Undocumented Dep Convention> | <file path to create or update> | <new doc / update doc / annotate status / consolidate / reduce> | <bullet list of file:line references> | <one concrete sentence> | <medium / high> — reject high unless breakage is critical; exclude low drift-risk findings |
 ` + "```" + `
 
 **Type definitions:** ` + "`consolidate`" + ` — move content to SoT doc, replace original with link. ` + "`reduce`" + ` — cut verbosity, add nothing.
